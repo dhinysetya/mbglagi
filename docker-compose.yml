@@ -1,0 +1,58 @@
+version: '3.8'
+services:
+  # Konfigurasi untuk service-menu
+  service-menu:
+    build: ./service-menu
+    container_name: mbg-service-menu
+    ports:
+      - "3000:3000" 
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./service-menu:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: always
+
+  # Konfigurasi untuk service-sekolah
+  service-sekolah:
+    build: ./service-sekolah
+    container_name: mbg-service-sekolah
+    ports:
+      - "5000:5000" # Mapping: Port laptop 5000 : Port container 5000
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./service-sekolah:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: always
+
+  # Konfigurasi untuk service-dapur (SUDAH DIPERBAIKI)
+  service-dapur:
+    build: ./service-dapur
+    container_name: mbg-service-dapur
+    ports:
+      - "3001:3001" # Port 3003 di laptop diarahkan ke 3001 di container
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./service-dapur:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: always
+
+  # Konfigurasi untuk service-distribusi
+  service-distribusi:
+    build: ./service-distribusi
+    container_name: mbg-service-distribusi
+    ports:
+      - "3005:3005"
+    # Menggunakan env_file untuk mengambil konfigurasi dari file .env
+    env_file:
+      - ./service-distribusi/.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./service-distribusi:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: always

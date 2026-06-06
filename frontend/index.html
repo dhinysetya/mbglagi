@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBG - Barokah Final | Beranda</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-[#F8FAFC]">
+
+    <nav class="bg-white shadow-sm py-4 px-10 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-shop text-[#113F67] text-2xl"></i>
+            <span class="font-bold text-[#113F67] tracking-tight uppercase">Program Nasional MBG</span>
+        </div>
+        <div class="flex gap-8 items-center font-medium text-gray-600">
+            <a href="index.html" class="bg-[#113F67] text-white px-4 py-2 rounded-full text-sm">Beranda</a>
+            <a href="sekolah.html" class="hover:text-[#33A1E0]">Sekolah</a>
+            <a href="dapur.html" class="hover:text-[#33A1E0]">Dapur</a>
+            <a href="menu.html" class="hover:text-[#33A1E0]">Menu</a>
+            <a href="inventory.html" class="hover:text-[#33A1E0]">Bahan Baku</a>
+            <a href="distribusi.html" class="hover:text-[#33A1E0]">Distribusi</a>
+        </div>
+    </nav>
+
+    <main class="max-w-[1400px] mx-auto mt-8 p-6">
+        <div class="bg-[#A7D8E8] rounded-[40px] p-12 flex flex-col md:flex-row gap-10 min-h-[600px] relative overflow-hidden">
+            
+            <div class="flex-1 z-10">
+                <div class="flex items-center gap-2 mb-6">
+                    <i class="fa-solid fa-bowl-rice text-[#113F67] text-3xl"></i>
+                    <span class="font-semibold text-[#113F67]">PROGRAM NASIONAL MBG</span>
+                </div>
+                <h1 class="text-6xl font-black text-[#113F67] leading-tight mb-6">
+                    Makan Bergizi<br>Gratis
+                </h1>
+                <p class="text-[#113F67] opacity-80 text-lg max-w-md mb-8">
+                    Kami mengelola distribusi makanan bergizi gratis untuk sekolah-sekolah di seluruh Indonesia secara efisien dan tepat waktu. Sistem ini memastikan setiap anak mendapatkan asupan nutrisi yang dibutuhkan.
+                </p>
+                <a href="crudDistribusi.html" class="bg-[#FFF9AF] text-[#113F67] font-bold px-8 py-4 rounded-full inline-flex items-center gap-3 shadow-lg hover:bg-[#33A1E0] hover:text-white transition-all">
+                    Mulai Distribusi Baru <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="flex-1 flex flex-col gap-6 z-10">
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="bg-[#FFF9AF]/50 backdrop-blur-sm p-6 rounded-[30px] border border-white/30">
+                        <i class="fa-solid fa-truck-fast text-[#113F67] mb-3 text-xl"></i>
+                        <h4 class="font-bold text-[#113F67]">Logistik Terintegrasi</h4>
+                        <p class="text-xs text-[#113F67]/70 mt-1">Pantau pengiriman dari dapur hingga sekolah secara real-time.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-[30px] shadow-sm">
+                        <i class="fa-solid fa-certificate text-[#33A1E0] mb-3 text-xl"></i>
+                        <h4 class="font-bold text-[#113F67]">Dapur Terakreditasi</h4>
+                        <p class="text-xs text-gray-500 mt-1">Proses memasak diawasi untuk standar gizi dan kebersihan.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-[30px] shadow-sm">
+                        <i class="fa-solid fa-seedling text-[#33A1E0] mb-3 text-xl"></i>
+                        <h4 class="font-bold text-[#113F67]">Bahan Baku Lokal</h4>
+                        <p class="text-xs text-gray-500 mt-1">Prioritas menggunakan bahan pangan lokal dari petani daerah.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-[30px] shadow-sm">
+                        <i class="fa-solid fa-school text-[#33A1E0] mb-3 text-xl"></i>
+                        <h4 class="font-bold text-[#113F67]">Akses Merata</h4>
+                        <p class="text-xs text-gray-500 mt-1">Sistem memastikan distribusi yang adil untuk semua sekolah.</p>
+                    </div>
+                </div>
+
+                <div class="bg-[#F1F6F9]/80 backdrop-blur-sm rounded-[40px] p-8 mt-4 flex-1">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-[#113F67]">Dapur MBG & Sekolah Binaaan</h3>
+                        <div class="flex gap-2 text-[10px]">
+                            <button class="bg-[#FFF9AF] px-4 py-1 rounded-full border border-[#113F67]/20">Semua</button>
+                            <button class="bg-white px-4 py-1 rounded-full text-gray-400">Dapur Umum</button>
+                            <button class="bg-white px-4 py-1 rounded-full text-gray-400">Sekolah</button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-white p-3 rounded-[25px] shadow-sm">
+                            <div class="h-24 bg-[#113F67] rounded-[20px] mb-3 overflow-hidden flex items-center justify-center">
+                                <i class="fa-solid fa-bowl-food text-white text-3xl"></i>
+                            </div>
+                            <h5 class="font-bold text-[#113F67] text-[11px]">Dapur Bandung MBG</h5>
+                            <p class="text-[9px] text-gray-400">Jawa Barat</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-[25px] shadow-sm">
+                            <div class="h-24 bg-[#33A1E0] rounded-[20px] mb-3 flex items-center justify-center">
+                                <i class="fa-solid fa-chart-line text-white text-3xl"></i>
+                            </div>
+                            <h5 class="font-bold text-[#113F67] text-[11px]">SDN 01 Bojongsoang</h5>
+                            <p class="text-[9px] text-gray-400">Jawa Barat</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-[25px] shadow-sm">
+                            <div class="h-24 bg-[#FFF9AF] rounded-[20px] mb-3 flex items-center justify-center">
+                                <i class="fa-solid fa-child text-[#113F67] text-3xl"></i>
+                            </div>
+                            <h5 class="font-bold text-[#113F67] text-[11px]">Wilayah Pantura</h5>
+                            <p class="text-[9px] text-gray-400">Jawa Tengah</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

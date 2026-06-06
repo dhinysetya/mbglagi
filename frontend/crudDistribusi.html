@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirim Paket MBG | MBG - Barokah</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-[#F8FAFC]">
+
+    <nav class="bg-white shadow-sm py-4 px-10 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-paper-plane text-[#113F67] text-2xl"></i>
+            <span class="font-bold text-[#113F67] tracking-tight uppercase">Program Nasional MBG</span>
+        </div>
+        <div class="flex gap-8 items-center font-medium text-gray-600">
+            <a href="index.html" class="hover:text-[#33A1E0]">Beranda</a>
+            <a href="distribusi.html" class="text-[#113F67] font-bold">Kembali ke Monitoring</a>
+        </div>
+    </nav>
+
+    <main class="max-w-[800px] mx-auto p-10">
+        <div class="bg-white p-10 rounded-[40px] shadow-sm border border-gray-100">
+            <div class="text-center mb-10">
+                <h3 class="text-3xl font-black text-[#113F67]">Form Pengiriman</h3>
+                <p class="text-gray-400 text-sm mt-2">Pastikan semua data sinkron agar stok terpotong otomatis.</p>
+            </div>
+
+            <form id="form-distribusi" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-2">Pilih Sekolah Tujuan</label>
+                    <select id="id_sekolah_dist" required class="w-full mt-1 p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#33A1E0]">
+                        <option value="">Pilih Sekolah...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-2">Menu Makanan</label>
+                    <select id="id_menu_dist" required class="w-full mt-1 p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#33A1E0]">
+                        <option value="">Pilih Menu...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-2">Dapur Pengirim</label>
+                    <select id="id_dapur_dist" required class="w-full mt-1 p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#33A1E0]">
+                        <option value="">Pilih Dapur...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-2">Jumlah Porsi</label>
+                    <input type="number" id="jumlah_porsi" required placeholder="0" class="w-full mt-1 p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#33A1E0]">
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-2">Status Awal</label>
+                    <select id="status_kirim" class="w-full mt-1 p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#33A1E0]">
+                        <option value="Persiapan">Persiapan</option>
+                        <option value="Perjalanan">Dalam Perjalanan</option>
+                        <option value="Diterima">Diterima Sekolah</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-2">Estimasi Waktu Sampai</label>
+                    <input type="date" id="waktu_sampai" 
+                        class="w-full mt-1 p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#33A1E0]">
+                </div>
+
+                <div class="md:col-span-2 mt-4">
+                    <button type="submit" class="w-full bg-[#113F67] text-white font-black py-5 rounded-[25px] shadow-lg hover:bg-[#33A1E0] transition-all flex items-center justify-center gap-3">
+                        <i class="fa-solid fa-truck-fast"></i> KONFIRMASI & KIRIM SEKARANG
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

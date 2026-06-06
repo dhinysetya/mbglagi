@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Menu & Resep | MBG - Barokah</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-[#F8FAFC]">
+
+    <nav class="bg-white shadow-sm py-4 px-10 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-utensils text-[#113F67] text-2xl"></i>
+            <span class="font-bold text-[#113F67] tracking-tight uppercase">Program Nasional MBG</span>
+        </div>
+        <div class="flex gap-8 items-center font-medium text-gray-600">
+            <a href="index.html" class="hover:text-[#33A1E0]">Beranda</a>
+            <a href="menu.html" class="text-[#113F67] font-bold">Kembali ke Monitoring</a>
+        </div>
+    </nav>
+
+    <main class="max-w-[1200px] mx-auto p-10">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+
+            <div class="lg:col-span-1">
+                <div class="bg-white p-8 rounded-[35px] shadow-sm border border-gray-100 sticky top-24">
+                    <h3 class="text-2xl font-bold text-[#113F67] mb-6">Input Menu Baru</h3>
+                    <form id="form-menu" class="flex flex-col gap-5">
+                        <input type="hidden" id="id_menu">
+
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-2">Nama Paket Menu</label>
+                            <input type="text" id="nama_paket" placeholder="Contoh: Paket A (Nasi + Ayam)" required
+                                class="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#33A1E0] outline-none text-sm">
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-2">Pilih Unit Dapur</label>
+                            <select id="id_dapur_menu" required
+                                class="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#33A1E0] outline-none text-sm">
+                                <option value="">Memuat unit dapur...</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-2">Deskripsi Menu</label>
+                            <textarea id="deskripsi" placeholder="Keterangan singkat menu..." rows="2"
+                                class="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#33A1E0] outline-none text-sm"></textarea>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-50">
+                            <div class="flex justify-between items-center mb-3">
+                                <label class="text-xs font-bold text-[#113F67] uppercase ml-2">Komposisi Bahan (Resep)</label>
+                                <button type="button" onclick="addRecipeRow()" class="text-[#33A1E0] text-xs font-bold hover:underline">
+                                    + Tambah Bahan
+                                </button>
+                            </div>
+                            
+                            <div id="recipe-container" class="flex flex-col gap-2">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full mt-2 bg-[#113F67] text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-[#33A1E0] transition-all">
+                            Simpan Menu & Resep
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-[35px] shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-8 border-b border-gray-50 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#113F67]">Daftar Menu Tersedia</h3>
+                            <p id="count-menu" class="text-xs text-gray-400 mt-1">0 Menu Terdaftar</p>
+                        </div>
+                        <i class="fa-solid fa-utensils text-gray-200 text-2xl"></i>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-gray-400 text-[10px] uppercase font-bold tracking-widest">
+                                <tr>
+                                    <th class="px-8 py-4">Nama Paket</th>
+                                    <th class="px-8 py-4">Deskripsi</th>
+                                    <th class="px-8 py-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body-menu" class="text-gray-600 divide-y divide-gray-50">
+                                <tr>
+                                    <td colspan="3" class="px-8 py-10 text-center text-gray-400 italic">
+                                        Menghubungkan ke service menu...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if(document.getElementById('recipe-container').children.length === 0) {
+                    addRecipeRow();
+                }
+
+                if (typeof fillDapurMenuDropdown === "function") fillDapurMenuDropdown();
+            }, 500);
+        });
+    </script>
+
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Unit Dapur | MBG - Barokah</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-[#F8FAFC]">
+
+    <nav class="bg-white shadow-sm py-4 px-10 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-fire-burner text-[#113F67] text-2xl"></i>
+            <span class="font-bold text-[#113F67] tracking-tight uppercase">Program Nasional MBG</span>
+        </div>
+        <div class="flex gap-8 items-center font-medium text-gray-600">
+            <a href="index.html" class="hover:text-[#33A1E0]">Beranda</a>
+            <a href="dapur.html" class="text-[#113F67] font-bold">Kembali ke Monitoring</a>
+        </div>
+    </nav>
+
+    <main class="max-w-[1200px] mx-auto p-10">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            
+            <div class="lg:col-span-1">
+                <div class="bg-white p-8 rounded-[35px] shadow-sm border border-gray-100">
+                    <h3 class="text-2xl font-bold text-[#113F67] mb-6">Input Unit Dapur</h3>
+                    <form id="form-dapur" class="flex flex-col gap-5">
+                        <input type="hidden" id="id_dapur">
+
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-2">Nama Unit Dapur</label>
+                            <input type="text" id="nama_dapur" placeholder="Contoh: Dapur Umum Pusat" required
+                                class="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#33A1E0] outline-none">
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-2">Kapasitas Produksi</label>
+                            <div class="relative">
+                                <input type="number" id="kapasitas_porsi" placeholder="0" required
+                                    class="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#33A1E0] outline-none">
+                                <span class="absolute right-4 top-5 text-gray-400 text-sm">Porsi/Hari</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-2">Alamat / Lokasi</label>
+                            <textarea id="lokasi" placeholder="Alamat lengkap unit dapur..." rows="3" required
+                                class="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#33A1E0] outline-none"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full mt-2 bg-[#113F67] text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-[#33A1E0] transition-all">
+                            Simpan Unit Dapur
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-[35px] shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-8 border-b border-gray-50 flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-[#113F67]">Daftar Dapur Terdaftar</h3>
+                        <i class="fa-solid fa-list-check text-gray-200 text-xl"></i>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-gray-400 text-[10px] uppercase font-bold tracking-widest">
+                                <tr>
+                                    <th class="px-8 py-4">Informasi Dapur</th>
+                                    <th class="px-8 py-4 text-center">Kapasitas</th>
+                                    <th class="px-8 py-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body-dapur" class="text-gray-600 divide-y divide-gray-50">
+                                <tr>
+                                    <td colspan="3" class="px-8 py-10 text-center text-gray-400 italic">
+                                        Menghubungkan ke service dapur...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
