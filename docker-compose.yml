@@ -56,3 +56,14 @@ services:
       - ./service-distribusi:/usr/src/app
       - /usr/src/app/node_modules
     restart: always
+  service-inventory:
+    build: ./service-inventory
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - DB_HOST=host.docker.internal
+      - DB_USER=root
+      - DB_PASS=
+      - DB_NAME=db_inventory
+      - DB_PORT=3306
