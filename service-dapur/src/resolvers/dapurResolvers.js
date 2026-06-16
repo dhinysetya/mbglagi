@@ -2,7 +2,6 @@ const Dapur = require('../models/dapur');
 
 const resolvers = {
   Query: {
-    // Setara dengan getAllDapur
     semuaDapur: async () => {
       try {
         return await Dapur.findAll();
@@ -11,7 +10,6 @@ const resolvers = {
       }
     },
 
-    // Setara dengan getDapurById
     dapurById: async (_, { id_dapur }) => {
       try {
         const data = await Dapur.findByPk(id_dapur);
@@ -24,7 +22,6 @@ const resolvers = {
   },
 
   Mutation: {
-    // Setara dengan createDapur
     createDapur: async (_, { input }) => {
       try {
         return await Dapur.create(input);
@@ -33,7 +30,6 @@ const resolvers = {
       }
     },
 
-    // Setara dengan updateDapur
     updateDapur: async (_, { id_dapur, input }) => {
       try {
         const [updated] = await Dapur.update(input, { where: { id_dapur } });
@@ -44,7 +40,6 @@ const resolvers = {
       }
     },
 
-    // Setara dengan deleteDapur
     deleteDapur: async (_, { id_dapur }) => {
       try {
         const deleted = await Dapur.destroy({ where: { id_dapur } });

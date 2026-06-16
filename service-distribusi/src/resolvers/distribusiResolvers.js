@@ -3,13 +3,11 @@ const axios = require('axios');
 
 const resolvers = {
   Query: {
-    // 1. getAllShipments
     allShipments: async () => {
       try {
         const shipments = await Shipment.findAll();
         return await Promise.all(shipments.map(async (s) => {
           const shipData = s.toJSON();
-          // Fetch data dari service lain (Microservices)
           const [sekolahRes, dapurRes, menuRes] = await Promise.all([
             axios.get(`${process.env.URL_SERVICE_SEKOLAH}/api/sekolah/${shipData.id_sekolah}`).catch(() => null),
             axios.get(`${process.env.URL_SERVICE_DAPUR}/api/dapur/${shipData.id_dapur}`).catch(() => null),
@@ -28,14 +26,12 @@ const resolvers = {
       }
     },
 
-    // 2. getShipmentById
     shipmentById: async (_, { id }) => {
       const shipment = await Shipment.findByPk(id);
       if (!shipment) throw new Error('Data tidak ditemukan');
       return shipment;
     },
 
-    // 3. checkMenuStatus (isProcessing)
     checkMenuStatus: async (_, { id_menu }) => {
       const activeShipment = await Shipment.findOne({
         where: {
@@ -48,16 +44,28 @@ const resolvers = {
   },
 
   Mutation: {
-    // 1. createShipment
     createShipment: async (_, args) => {
-      return await Shipment.create({
-        ...args,
-        status_kirim: args.status,
-        waktu_sampai: args.waktu_sampai || null
-      });
-    },
+        let porsiFinal = args.jumlah_porsi;
 
-    // 2. updateShipment
+        if (!porsiFinal || porsiFinal === 0) {
+          try {
+            const sekolahRes = await axios.get(`${process.env.URL_SERVICE_SEKOLAH}/api/sekolah/${args.id_sekolah}`);
+            porsiFinal = sekolahRes?.data?.jumlah_siswa || 0;
+            
+            if (porsiFinal === 0) throw new Error("Jumlah siswa di sekolah tersebut tidak valid.");
+          } catch (error) {
+            throw new Error("Gagal terhubung ke Service Sekolah untuk mengambil data porsi: " + error.message);
+          }
+        }
+
+        return await Shipment.create({
+          ...args,
+          jumlah_porsi: porsiFinal,
+          status_kirim: args.status,
+          waktu_sampai: args.waktu_sampai || null
+        });
+      },
+
     updateShipment: async (_, { id, ...args }) => {
       const updateData = {
         ...args,
@@ -68,7 +76,6 @@ const resolvers = {
       return { message: "Pengiriman berhasil diperbarui" };
     },
 
-    // 3. deleteShipment
     deleteShipment: async (_, { id }) => {
       await Shipment.destroy({ where: { id_shipment: id } });
       return { message: "Data pengiriman dihapus" };
