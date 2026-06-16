@@ -1,4 +1,4 @@
-const Shipment = require('../src/models/shipment');
+const Shipment = require('../models/shipment');
 const axios = require('axios');
 
 const resolvers = {

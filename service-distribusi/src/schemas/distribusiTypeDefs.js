@@ -1,30 +1,57 @@
 const { gql } = require('apollo-server-express');
 
 const typeDefs = gql`
-  type Distribusi {
-    id_distribusi: ID!
-    id_menu: ID!
+  type Shipment {
+    id_shipment: ID!
+    id_sekolah: ID!
     id_dapur: ID!
-    jumlah_distribusi: Int!
-    tanggal_distribusi: String!
+    id_menu: ID!
+    jumlah_porsi: Int
+    status_kirim: String
+    waktu_sampai: String
+
+    nama_sekolah: String
+    nama_dapur: String
+    nama_menu: String
   }
 
-  input DistribusiInput {
-    id_menu: ID!
-    id_dapur: ID!
-    jumlah_distribusi: Int!
-    tanggal_distribusi: String!
+  type StatusResponse {
+    isProcessing: Boolean
+  }
+
+  type MessageResponse {
+    message: String
   }
 
   type Query {
-    semuaDistribusi: [Distribusi]
-    distribusiById(id_distribusi: ID!): Distribusi
+    allShipments: [Shipment]
+    shipmentById(id: ID!): Shipment
+    checkMenuStatus(id_menu: ID!): StatusResponse
   }
 
   type Mutation {
-    createDistribusi(input: DistribusiInput!): Distribusi
-    updateDistribusi(id_distribusi: ID!, input: DistribusiInput!): Distribusi
-    deleteDistribusi(id_distribusi: ID!): Boolean
+    createShipment(
+      id_sekolah: ID!
+      id_dapur: ID!
+      id_menu: ID!
+      jumlah_porsi: Int
+      status: String
+      waktu_sampai: String
+    ): Shipment
+
+    updateShipment(
+      id: ID!
+      id_sekolah: ID
+      id_dapur: ID
+      id_menu: ID
+      jumlah_porsi: Int
+      status: String
+      waktu_sampai: String
+    ): MessageResponse
+
+    deleteShipment(
+      id: ID!
+    ): MessageResponse
   }
 `;
 

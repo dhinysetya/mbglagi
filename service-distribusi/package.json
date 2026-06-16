@@ -13,14 +13,12 @@
   "type": "commonjs",
   "dependencies": {
     "apollo-server-express": "^3.13.0",
-    "axios": "^1.15.2",
+    "axios": "^1.18.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.21.2",
-    "graphql": "^16.14.1",
+    "graphql": "^16.11.0",
     "mysql2": "^3.22.4",
-    "sequelize": "^6.37.8",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
-}
+    "sequelize": "^6.37.8"
+  }
 }
