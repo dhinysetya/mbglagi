@@ -11,8 +11,16 @@ const resolvers = {
     }
   },
   Mutation: {
-    createMenu: async (_, { nama_paket, deskripsi }) => {
-      return await Menu.create({ nama_paket, deskripsi });
+    // Diubah untuk menghandle input bulk/nested insert
+    createMenu: async (_, { input }) => {
+      try {
+        const newMenu = await Menu.create(input, {
+          include: [MenuRecipe] // Kunci utamanya ada di sini!
+        });
+        return newMenu;
+      } catch (error) {
+        throw new Error("Gagal membuat menu beserta resep: " + error.message);
+      }
     },
     updateMenu: async (_, { id, nama_paket, deskripsi }) => {
       const menu = await Menu.findByPk(id);
