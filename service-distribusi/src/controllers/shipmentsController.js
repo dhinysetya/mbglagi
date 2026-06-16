@@ -34,14 +34,34 @@ exports.getAllShipments = async (req, res) => {
 exports.createShipment = async (req, res) => {
     try {
         const { id_sekolah, id_menu, id_dapur, jumlah_porsi, status, waktu_sampai } = req.body;
+        
+        let porsiFinal = jumlah_porsi;
+
+        if (!porsiFinal || porsiFinal === 0) {
+            try {
+                const sekolahRes = await axios.get(`${process.env.URL_SERVICE_SEKOLAH}/api/sekolah/${id_sekolah}`);
+                porsiFinal = sekolahRes?.data?.jumlah_siswa || 0; 
+                
+                if (porsiFinal === 0) {
+                    return res.status(400).json({ message: "Jumlah siswa di sekolah tersebut tidak ditemukan atau 0." });
+                }
+            } catch (errSekolah) {
+                return res.status(424).json({ 
+                    message: "Gagal mengambil data jumlah siswa karena Service Sekolah tidak merespon.",
+                    error: errSekolah.message 
+                });
+            }
+        }
+
         const newShipment = await Shipment.create({
             id_sekolah,
             id_menu,
             id_dapur,
-            jumlah_porsi, 
+            jumlah_porsi: porsiFinal,
             status_kirim: status,
             waktu_sampai: waktu_sampai || null
         });
+
         res.status(201).json(newShipment);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -89,14 +109,9 @@ exports.deleteShipment = async (req, res) => {
     }
 };
 
-// =========================================================================
-// PERBAIKAN: Menambahkan status 'Persiapan' agar dilarang menghapus menu
-// =========================================================================
 exports.checkMenuStatus = async (req, res) => {
     try {
         const { id_menu } = req.params;
-
-        // Mencari shipment dengan status pengiriman yang dianggap masih aktif berjalan/dipersiapkan
         const activeShipment = await Shipment.findOne({
             where: {
                 id_menu: id_menu,
@@ -109,12 +124,10 @@ exports.checkMenuStatus = async (req, res) => {
             }
         });
 
-        // Jika shipment dengan status-status di atas ditemukan, kunci menu!
         if (activeShipment) {
             return res.json({ isProcessing: true });
         }
 
-        // Jika status pengiriman adalah 'Diterima' atau data shipment kosong, baru boleh dihapus
         return res.json({ isProcessing: false });
 
     } catch (error) {

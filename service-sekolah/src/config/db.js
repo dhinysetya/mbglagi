@@ -14,10 +14,10 @@ const sequelize = new Sequelize(
 
 sequelize.authenticate()
     .then(() => {
-        console.log('✅ Koneksi database Inventory berhasil.');
+        console.log('Koneksi database Inventory berhasil.');
     })
     .catch(err => {
-        console.error('❌ Gagal koneksi ke database Inventory:', err.message);
+        console.error('Gagal koneksi ke database Inventory:', err.message);
     });
 
 module.exports = sequelize;

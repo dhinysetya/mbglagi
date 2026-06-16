@@ -37,7 +37,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/inventory', inventoryRoutes);
 
 app.get('/', (req, res) => {
-    res.send(`🚀 Service Inventory (${process.env.DB_NAME}) sedang berjalan...`);
+    res.send(`Service Inventory (${process.env.DB_NAME}) sedang berjalan...`);
 });
 
 app.use((req, res) => {
@@ -49,13 +49,13 @@ const PORT = process.env.PORT || 3004;
 sequelize.sync({ alter: true }) 
     .then(() => {
         console.log('--------------------------------------------------');
-        console.log(`✅ Database [${process.env.DB_NAME}] Terkoneksi & Sinkron`);
-        console.log(`📖 Dokumentasi API: http://localhost:${PORT}/api-docs`);
+        console.log(`Database [${process.env.DB_NAME}] Terkoneksi & Sinkron`);
+        console.log(`Dokumentasi API: http://localhost:${PORT}/api-docs`);
         console.log('--------------------------------------------------');
         app.listen(PORT, () => {
-            console.log(`🚀 Service Inventory berjalan di port: ${PORT}`);
+            console.log(`Service Inventory berjalan di port: ${PORT}`);
         });
     })
     .catch(err => {
-        console.error('❌ Gagal sinkronisasi database:', err.message);
+        console.error('Gagal sinkronisasi database:', err.message);
     });
