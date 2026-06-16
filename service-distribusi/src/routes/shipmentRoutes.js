@@ -16,10 +16,6 @@ router.get('/', shipmentsController.getAllShipments);
 router.get('/:id', shipmentsController.getShipmentById);
 router.post('/', shipmentsController.createShipment);
 
-// =========================================================================
-// ROUTE BARU: Endpoint untuk dicek oleh Service Menu sebelum hapus data
-// =========================================================================
-// Harus ditaruh di router milik service_distribusi, BUKAN service-menu
 router.get('/check-menu/:id_menu', shipmentsController.checkMenuStatus);
 
 /**
