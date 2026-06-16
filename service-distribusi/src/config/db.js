@@ -14,10 +14,10 @@ const sequelize = new Sequelize(
 
 sequelize.authenticate()
     .then(() => {
-        console.log(`✅ Koneksi database [${process.env.DB_NAME}] berhasil.`);
+        console.log(`Koneksi database [${process.env.DB_NAME}] berhasil.`);
     })
     .catch(err => {
-        console.error(`❌ Gagal koneksi ke database [${process.env.DB_NAME}]:`, err.message);
+        console.error(`Gagal koneksi ke database [${process.env.DB_NAME}]:`, err.message);
     });
 
 module.exports = sequelize;

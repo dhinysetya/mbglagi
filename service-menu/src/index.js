@@ -11,7 +11,7 @@ async function startServer() {
   server.applyMiddleware({ app });
 
   app.listen(3002, () => {
-    console.log('🍽️ Service Menu GraphQL berjalan di http://localhost:3002/graphql');
+    console.log('Service Menu GraphQL berjalan di http://localhost:3002/graphql');
   });
 }
 

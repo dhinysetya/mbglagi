@@ -14,10 +14,10 @@ const sequelize = new Sequelize(
 
 sequelize.authenticate()
   .then(() => {
-    console.log('✅ Koneksi database Dapur berhasil.');
+    console.log('Koneksi database Dapur berhasil.');
   })
   .catch(err => {
-    console.error('❌ Gagal koneksi ke database Dapur:', err.message);
+    console.error('Gagal koneksi ke database Dapur:', err.message);
   });
 
 module.exports = sequelize;

@@ -42,15 +42,15 @@ async function startServer() {
   try {
 
     await sequelize.sync({ alter: true });
-    console.log(`✅ Database [db_distribusi] Terkoneksi`);
+    console.log(`Database [db_distribusi] Terkoneksi`);
     
     app.listen(PORT, () => {
-      console.log(`📖 Swagger: http://localhost:${PORT}/api-docs`);
-      console.log(`🚀 GraphQL: http://localhost:${PORT}${server.graphqlPath}`);
-      console.log(`🚀 Server berjalan di port: ${PORT}`);
+      console.log(`Swagger: http://localhost:${PORT}/api-docs`);
+      console.log(`GraphQL: http://localhost:${PORT}${server.graphqlPath}`);
+      console.log(`Server berjalan di port: ${PORT}`);
     });
   } catch (err) {
-    console.error('❌ Gagal sinkronisasi database:', err.message);
+    console.error('Gagal sinkronisasi database:', err.message);
   }
 }
 

@@ -24,10 +24,7 @@ exports.getInventoryById = async (req, res) => {
 
 exports.reduceBulkStock = async (req, res) => {
     try {
-        // Ambil id_dapur, serta toleransi pembacaan jika dikirim sebagai 'bahan' atau 'items'
         const { id_dapur, bahan, items } = req.body; 
-        
-        // Gunakan list data yang tersedia (jika 'bahan' kosong, pakai 'items')
         const daftarBahan = bahan || items;
 
         if (!daftarBahan || !Array.isArray(daftarBahan)) {
@@ -37,7 +34,6 @@ exports.reduceBulkStock = async (req, res) => {
         for (let item of daftarBahan) {
             const inv = await Inventory.findOne({ where: { id_inventory: item.id_inventory, id_dapur } });
             if (inv) {
-                // Lakukan pengurangan stok
                 inv.stok = parseFloat(inv.stok) - parseFloat(item.total_kurangi);
                 await inv.save();
             }
