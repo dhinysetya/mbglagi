@@ -1,32 +1,24 @@
-const { gql } = require('apollo-server-express');
-
-const typeDefs = gql`
+const inventoryTypeDefs = `#graphql
   type Inventory {
     id_inventory: ID!
-    id_dapur: ID!
+    id_dapur: Int!
     nama_bahan: String!
     stok: Float!
     satuan: String!
-  }
-
-  input InventoryInput {
-    id_dapur: ID!
-    nama_bahan: String!
-    stok: Float!
-    satuan: String!
+    createdAt: String
+    updatedAt: String
   }
 
   type Query {
-    semuaInventory: [Inventory]
-    inventoryByDapur(id_dapur: ID!): [Inventory]
-    inventoryById(id: ID!): Inventory
+    getInventories: [Inventory]
+    getInventoryByDapur(id_dapur: Int!): [Inventory]
   }
 
   type Mutation {
-    createInventory(input: InventoryInput!): Inventory
-    updateInventory(id: ID!, input: InventoryInput!): Inventory
-    deleteInventory(id: ID!): Boolean
+    createInventory(id_dapur: Int!, nama_bahan: String!, stok: Float!, satuan: String!): Inventory
+    updateInventory(id_inventory: ID!, stok: Float!): Inventory
+    deleteInventory(id_inventory: ID!): String
   }
 `;
 
-module.exports = typeDefs;
+module.exports = inventoryTypeDefs;

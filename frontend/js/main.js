@@ -28,8 +28,8 @@ async function fetchDapur() {
     if (!containerGrid && !tableBody) return;
 
     try {
-        const res = await axios.get(URL_DAPUR);
-        const data = res.data;
+        const result = await API.dapur.getAll();
+        const data = result.semuaDapur;
 
         if (containerGrid) {
             if (data.length === 0) {
@@ -138,7 +138,7 @@ async function setupFormDapur() {
                 alert("Unit Dapur Berhasil Diperbarui!");
                 window.location.href = 'dapur.html';
             } else {
-                const res = await axios.post(URL_DAPUR, payload);
+                const res = await API.dapur.create(payload);
                 if (res.status === 201 || res.status === 200) {
                     alert("Unit Dapur Berhasil Ditambahkan!");
                     form.reset();
@@ -155,7 +155,7 @@ async function setupFormDapur() {
 async function deleteDapur(id) {
     if (confirm('Apakah Anda yakin ingin menghapus unit dapur ini?')) {
         try {
-            await axios.delete(`${URL_DAPUR}/${id}`);
+            await API.dapur.delete(id);
             fetchDapur();
         } catch (err) {
             console.error("Gagal Hapus:", err);
@@ -176,8 +176,8 @@ async function fetchSekolah() {
     if (!containerGrid && !tableBody) return;
 
     try {
-        const res = await axios.get(URL_SEKOLAH);
-        const data = res.data;
+        const result = await API.sekolah.getAll();
+        const data = result.semuaSekolah;
 
         if (countText) countText.innerText = `${data.length} Terdaftar`;
 
@@ -268,7 +268,7 @@ async function setupFormSekolah() {
                 alert("Data Sekolah Berhasil Diperbarui!");
                 window.location.href = 'sekolah.html';
             } else {
-                await axios.post(URL_SEKOLAH, payload);
+                await API.sekolah.create(payload);
                 alert("Sekolah Berhasil Ditambahkan!");
                 form.reset();
                 fetchSekolah();
@@ -304,8 +304,8 @@ async function fetchMenu() {
     if (!containerGrid && !tableBody) return;
 
     try {
-        const res = await axios.get(URL_MENU);
-        const data = res.data;
+        const result = await API.menu.getAll();
+        const data = result.getSemuaMenu;
 
         if (countMenu) countMenu.innerText = `${data.length} Menu Terdaftar`;
 
@@ -404,7 +404,10 @@ async function setupFormMenu() {
                 await axios.put(`${URL_MENU}/${idMenu}`, payload);
                 alert("Menu Berhasil Diperbarui!");
             } else {
-                await axios.post(URL_MENU, payload);
+                await API.menu.create(
+                    payload.nama_paket,
+                    payload.deskripsi
+                );
                 alert("Menu & Resep Berhasil Disimpan!");
             }
 
@@ -458,8 +461,8 @@ function addRecipeRow() {
 
 async function fillRecipeBahanDropdown(selectElement) {
     try {
-        const res = await axios.get(URL_INVENTORY);
-        const data = res.data;
+        const result = await API.inventory.getAll();
+        const data = result.semuaInventory;
         
         data.forEach(bahan => {
             const opt = document.createElement('option');
@@ -647,7 +650,7 @@ async function setupFormInventory() {
                 alert("Bahan Baku Berhasil Diperbarui!");
                 window.location.href = 'inventory.html';
             } else {
-                await axios.post(URL_INVENTORY, payload);
+                await API.inventory.create(payload);
                 alert("Logistik Berhasil Disimpan!");
                 form.reset();
                 fetchInventory();
@@ -661,7 +664,7 @@ async function setupFormInventory() {
 async function deleteInventory(id) {
     if (confirm('Hapus bahan baku ini?')) {
         try {
-            await axios.delete(`${URL_INVENTORY}/${id}`);
+            await API.inventory.delete(id);
             fetchInventory();
         } catch (err) {
             alert("Gagal menghapus");
@@ -679,8 +682,8 @@ async function fillDapurDropdown() {
     if (!dropdown) return;
 
     try {
-        const res = await axios.get(URL_DAPUR);
-        const data = res.data;
+        const result = await API.distribusi.getAll();
+        const data = result.semuaDistribusi;
 
         dropdown.innerHTML = '<option value="">-- Pilih Unit Dapur --</option>' + 
             data.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
@@ -869,7 +872,7 @@ async function setupFormDistribusi() {
                 await axios.put(`${URL_DISTRIBUSI}/${editId}`, payload);
                 alert("Pengiriman Berhasil Diperbarui!");
             } else {
-                await axios.post(URL_DISTRIBUSI, payload);
+                await API.distribusi.create(payload);
                 alert("Pengiriman Berhasil Dikonfirmasi!");
             }
             window.location.href = "distribusi.html";
@@ -887,7 +890,7 @@ function editDistribusi(id) {
 async function deleteDistribusi(id) {
     if (!confirm("Hapus data pengiriman ini?")) return;
     try {
-        await axios.delete(`${URL_DISTRIBUSI}/${id}`);
+        await API.distribusi.delete(id);
         alert("Data pengiriman berhasil dihapus!");
         fetchDistribusi();
     } catch (err) {

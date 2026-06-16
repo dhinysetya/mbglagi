@@ -1,61 +1,51 @@
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
+const { ApolloServer } = require('apollo-server-express');
+
 const sequelize = require('./config/db');
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
 
-const inventoryRoutes = require('./routes/inventoryRoutes');
+const typeDefs = require('./schemas/inventoryTypeDefs');
+const resolvers = require('./resolvers/inventoryResolvers');
 
-const app = express();
+async function startServer() {
+    const app = express();
 
-const swaggerOptions = {
-    definition: {
-        openapi: '3.0.0',
-        info: {
-            title: 'API MBG Barokah - Service Inventory',
-            version: '1.0.0',
-            description: 'Dokumentasi API untuk Manajemen Stok Bahan Baku Dapur',
-        },
-        servers: [
-            {
-                url: `http://localhost:${process.env.PORT || 3004}`,
-            },
-        ],
-    },
-    apis: ['./src/routes/*.js'], 
-};
+    const server = new ApolloServer({
+        typeDefs,
+        resolvers
+    });
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
+    await server.start();
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+    app.use(cors());
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    server.applyMiddleware({
+        app,
+        path: '/graphql'
+    });
 
-app.use('/api/inventory', inventoryRoutes);
+    app.get('/', (req, res) => {
+        res.send(`🚀 Service Inventory (${process.env.DB_NAME}) sedang berjalan...`);
+    });
 
-app.get('/', (req, res) => {
-    res.send(`🚀 Service Inventory (${process.env.DB_NAME}) sedang berjalan...`);
-});
+    const PORT = process.env.PORT || 5001;
 
-app.use((req, res) => {
-    res.status(404).json({ message: 'Endpoint tidak ditemukan!' });
-});
+    try {
+        await sequelize.sync({ alter: true });
 
-const PORT = process.env.PORT || 3004;
-
-sequelize.sync({ alter: true }) 
-    .then(() => {
         console.log('--------------------------------------------------');
         console.log(`✅ Database [${process.env.DB_NAME}] Terkoneksi & Sinkron`);
-        console.log(`📖 Dokumentasi API: http://localhost:${PORT}/api-docs`);
+        console.log(`📖 GraphQL Playground: http://localhost:${PORT}/graphql`);
         console.log('--------------------------------------------------');
+
         app.listen(PORT, () => {
-            console.log(`🚀 Service Inventory berjalan di port: ${PORT}`);
+            console.log(`🚀 Service Inventory GraphQL berjalan di port ${PORT}`);
         });
-    })
-    .catch(err => {
+    } catch (err) {
         console.error('❌ Gagal sinkronisasi database:', err.message);
-    });
+    }
+}
+
+startServer();

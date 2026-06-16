@@ -1,18 +1,52 @@
-const { ApolloServer } = require('apollo-server-express');
+require('dotenv').config();
+
 const express = require('express');
-const typeDefs = require('./schemas/sekolahTypeDefs'); // sesuaikan path
-const resolvers = require('./resolvers/sekolahResolvers'); // sesuaikan path
+const cors = require('cors');
+const { ApolloServer } = require('apollo-server-express');
+
+const sequelize = require('./config/db');
+const typeDefs = require('./schemas/sekolahTypeDefs');
+const resolvers = require('./resolvers/sekolahResolvers');
 
 async function startServer() {
-  const app = express();
-  const server = new ApolloServer({ typeDefs, resolvers });
+    const app = express();
 
-  await server.start();
-  server.applyMiddleware({ app });
+    const server = new ApolloServer({
+        typeDefs,
+        resolvers
+    });
 
-  app.listen(5000, () => { // Gunakan port berbeda jika service lain (Menu/Dapur) sudah jalan
-    console.log('🚀 Service Sekolah berjalan di http://localhost:5000/graphql');
-  });
+    await server.start();
+
+    app.use(cors());
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+
+    server.applyMiddleware({
+        app,
+        path: '/graphql'
+    });
+
+    app.get('/', (req, res) => {
+        res.send(`🚀 Service Sekolah (${process.env.DB_NAME}) sedang berjalan...`);
+    });
+
+    const PORT = process.env.PORT || 5000;
+
+    try {
+        await sequelize.sync({ alter: true });
+
+        console.log('--------------------------------------------------');
+        console.log(`✅ Database [${process.env.DB_NAME}] Terkoneksi & Sinkron`);
+        console.log(`📖 GraphQL Playground: http://localhost:${PORT}/graphql`);
+        console.log('--------------------------------------------------');
+
+        app.listen(PORT, () => {
+            console.log(`🚀 Service Sekolah GraphQL berjalan di port: ${PORT}`);
+        });
+    } catch (err) {
+        console.error('❌ Gagal sinkronisasi database:', err.message);
+    }
 }
 
 startServer();
