@@ -56,3 +56,14 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always
+    
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mbg-frontend
+    ports:
+      - "5501:5501"
+    volumes:
+      - ./frontend:/app
+    restart: always

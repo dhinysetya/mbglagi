@@ -1,3 +1,4 @@
+
 const { Menu, MenuRecipe } = require('../models/menu');
 
 const resolvers = {
@@ -21,10 +22,19 @@ const resolvers = {
     },
     deleteMenu: async (_, { id }) => {
       const menu = await Menu.findByPk(id);
-      if (!menu) throw new Error("Menu tidak ditemukan");
-      // Hapus recipe dulu, baru menu
-      await MenuRecipe.destroy({ where: { id_menu: id } });
+
+      if (!menu) {
+        throw new Error("Menu tidak ditemukan");
+      }
+
+      await MenuRecipe.destroy({
+        where: {
+          id_menu: id
+        }
+      });
+
       await menu.destroy();
+
       return true;
     },
     createMenuRecipe: async (_, { id_menu, id_inventory, jumlah_kebutuhan }) => {
