@@ -281,10 +281,12 @@ const API = {
                     nama_sekolah
                     nama_dapur
                     nama_menu
+                    createdAt
+                    updatedAt
                 }
             }
         `),
-
+ 
         getById: (id) => gql(GRAPHQL.DISTRIBUSI, `
             query($id: ID!) {
                 shipmentById(id: $id) {
@@ -298,10 +300,12 @@ const API = {
                     nama_sekolah
                     nama_dapur
                     nama_menu
+                    createdAt
+                    updatedAt
                 }
             }
         `, { id }),
-
+ 
         // "status" bukan "status_kirim" — sesuai nama param di schema createShipment
         create: ({ id_sekolah, id_dapur, id_menu, jumlah_porsi, status_kirim, waktu_sampai }) =>
             gql(GRAPHQL.DISTRIBUSI, `
@@ -330,7 +334,7 @@ const API = {
                 status: status_kirim,   // mapping: status_kirim → status
                 waktu_sampai: waktu_sampai || null
             }),
-
+ 
         // updateShipment → MessageResponse {message}, param "id" dan "status"
         update: (id, { id_sekolah, id_dapur, id_menu, jumlah_porsi, status_kirim, waktu_sampai }) =>
             gql(GRAPHQL.DISTRIBUSI, `
@@ -361,7 +365,7 @@ const API = {
                 status: status_kirim,
                 waktu_sampai: waktu_sampai || null
             }),
-
+ 
         // deleteShipment(id) → MessageResponse {message}
         delete: (id) => gql(GRAPHQL.DISTRIBUSI, `
             mutation($id: ID!) {

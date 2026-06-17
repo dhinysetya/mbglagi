@@ -668,76 +668,126 @@ async function deleteInventory(id) {
 
 async function fetchDistribusi() {
     console.log("[fetchDistribusi] Dipanggil...");
+    
     const containerGrid = document.getElementById('distribusi-container');
     const tableBody     = document.getElementById('table-body-distribusi');
+    
     if (!containerGrid && !tableBody) {
         console.warn("[fetchDistribusi] Tidak ada container/tbody, skip.");
         return;
     }
-
+ 
     try {
         const data = await API.distribusi.getAll();
         const list = data.allShipments || [];
+        
         console.log("[fetchDistribusi] Data diterima:", list);
-
-        // Render ke grid
+ 
+        if (list.length === 0) {
+            const emptyMsg = `<div class="col-span-full py-10 text-center text-gray-400">Belum ada pengiriman.</div>`;
+            if (containerGrid) containerGrid.innerHTML = emptyMsg;
+            if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="px-8 py-10 text-center text-gray-400">Belum ada data distribusi.</td></tr>`;
+            return;
+        }
+ 
+        // Render ke grid container
         if (containerGrid) {
-            if (list.length === 0) {
-                containerGrid.innerHTML = `<div class="col-span-full py-10 text-center text-gray-400">Belum ada pengiriman.</div>`;
-            } else {
-                containerGrid.innerHTML = list.map(d => {
-                    // Fallback jika nama null
-                    const namaSekolah = d.nama_sekolah || `Sekolah ID: ${d.id_sekolah}`;
-                    const namaMenu    = d.nama_menu    || `Menu ID: ${d.id_menu}`;
-                    const namaDapur   = d.nama_dapur   || `Dapur ID: ${d.id_dapur}`;
-                    const waktuSampai = d.waktu_sampai ? new Date(d.waktu_sampai).toLocaleDateString('id-ID') : 'Belum ada estimasi';
-                    const status      = d.status_kirim || 'PROSES';
-
-                    return `
-                    <div class="bg-white p-8 rounded-[35px] shadow-sm border border-gray-100">
+            containerGrid.innerHTML = list.map(d => {
+                // Format nama dengan fallback yang lebih smart
+                const namaSekolah = d.nama_sekolah ? d.nama_sekolah : `Sekolah ID: ${d.id_sekolah}`;
+                const namaMenu    = d.nama_menu ? d.nama_menu : `Menu ID: ${d.id_menu}`;
+                const namaDapur   = d.nama_dapur ? d.nama_dapur : `Dapur ID: ${d.id_dapur}`;
+                
+                // Format tanggal dengan error handling
+                let tanggalTiba = 'Belum ada estimasi';
+                if (d.waktu_sampai && d.waktu_sampai !== null && d.waktu_sampai !== 'null') {
+                    try {
+                        const date = new Date(d.waktu_sampai);
+                        if (!isNaN(date.getTime())) {
+                            tanggalTiba = date.toLocaleDateString('id-ID');
+                        }
+                    } catch (e) {
+                        console.warn(`[fetchDistribusi] Invalid date for shipment ${d.id_shipment}:`, d.waktu_sampai);
+                    }
+                }
+                
+                // Format tanggal dibuat
+                let tanggalDibuat = 'Baru saja';
+                if (d.createdAt && d.createdAt !== null && d.createdAt !== 'null') {
+                    try {
+                        const date = new Date(d.createdAt);
+                        if (!isNaN(date.getTime())) {
+                            tanggalDibuat = date.toLocaleDateString('id-ID');
+                        }
+                    } catch (e) {
+                        console.warn(`[fetchDistribusi] Invalid createdAt for shipment ${d.id_shipment}:`, d.createdAt);
+                    }
+                }
+                
+                const status = d.status_kirim ? d.status_kirim.toUpperCase() : 'PROSES';
+ 
+                return `
+                    <div class="bg-white p-8 rounded-[35px] shadow-sm border border-gray-100 hover:shadow-lg transition-all">
                         <div class="flex justify-between items-start mb-4">
-                            <span class="bg-blue-50 text-[#33A1E0] text-[10px] font-black px-3 py-1 rounded-full uppercase">${status}</span>
-                            <p class="text-xs text-gray-400">ID: ${d.id_shipment}</p>
+                            <span class="bg-blue-50 text-[#33A1E0] text-[10px] font-black px-3 py-1 rounded-full uppercase">
+                                ${status}
+                            </span>
+                            <p class="text-xs text-gray-400">Dibuat: ${tanggalDibuat}</p>
                         </div>
+                        
                         <h3 class="text-xl font-black text-[#113F67] mb-1">${namaSekolah}</h3>
                         <p class="text-sm text-gray-500 mb-2 italic">${namaMenu}</p>
+                        
                         <p class="text-xs text-gray-400 mb-3 flex items-center gap-1">
-                            <i class="fa-solid fa-clock text-[#33A1E0]"></i> Tiba: ${waktuSampai}
+                            <i class="fa-solid fa-clock text-[#33A1E0]"></i> 
+                            Estimasi Tiba: ${tanggalTiba}
                         </p>
+                        
                         <div class="flex justify-between items-center pt-4 border-t border-gray-50">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-box-open text-gray-300"></i>
                                 <span class="font-bold text-[#113F67]">${d.jumlah_porsi || 0} Porsi</span>
                             </div>
+                            
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center gap-1 text-xs text-gray-400">
-                                    <i class="fa-solid fa-shop"></i> <span>${namaDapur}</span>
+                                    <i class="fa-solid fa-shop"></i> 
+                                    <span>${namaDapur}</span>
                                 </div>
+                                
                                 <button onclick="editDistribusi(${d.id_shipment})" 
-                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center">
+                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center"
+                                    title="Edit">
                                     <i class="fa-solid fa-pencil text-xs"></i>
                                 </button>
+                                
                                 <button onclick="deleteDistribusi(${d.id_shipment})" 
-                                    class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
+                                    class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+                                    title="Hapus">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
-                `}).join('');
-            }
+                `;
+            }).join('');
         }
-
-        // Render ke table jika ada
+ 
+        // Render ke table (jika ada)
         if (tableBody) {
-            if (list.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="4" class="px-8 py-10 text-center text-gray-400">Belum ada data distribusi.</td></tr>`;
-            } else {
-                tableBody.innerHTML = list.map(d => `
+            tableBody.innerHTML = list.map(d => {
+                const namaSekolah = d.nama_sekolah ? d.nama_sekolah : `ID: ${d.id_sekolah}`;
+                const namaMenu    = d.nama_menu ? d.nama_menu : `ID: ${d.id_menu}`;
+                const status      = d.status_kirim ? d.status_kirim : 'Persiapan';
+ 
+                return `
                     <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-8 py-4 font-bold text-[#113F67]">${d.nama_sekolah || `ID: ${d.id_sekolah}`}</td>
-                        <td class="px-8 py-4">${d.nama_menu || `ID: ${d.id_menu}`}</td>
-                        <td class="px-8 py-4 text-center">${d.jumlah_porsi || 0}</td>
+                        <td class="px-8 py-4 font-bold text-[#113F67]">${namaSekolah}</td>
+                        <td class="px-8 py-4">${namaMenu}</td>
+                        <td class="px-8 py-4 text-center font-semibold">${d.jumlah_porsi || 0}</td>
+                        <td class="px-8 py-4 text-center text-xs">
+                            <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded">${status}</span>
+                        </td>
                         <td class="px-8 py-4 text-center">
                             <div class="flex justify-center gap-2">
                                 <button onclick="editDistribusi(${d.id_shipment})" 
@@ -751,70 +801,100 @@ async function fetchDistribusi() {
                             </div>
                         </td>
                     </tr>
-                `).join('');
-            }
+                `;
+            }).join('');
         }
-
+ 
     } catch (err) {
         console.error("[fetchDistribusi] Error:", err);
-        if (containerGrid) {
-            containerGrid.innerHTML = `<div class="col-span-full text-center text-red-500 py-10">Gagal memuat data distribusi: ${err.message}</div>`;
-            console.log("[fetchDistribusi] Render selesai, data:", list);
-        }
+        const errorMsg = `<div class="col-span-full text-center text-red-500 py-10">Gagal memuat: ${err.message}</div>`;
+        if (containerGrid) containerGrid.innerHTML = errorMsg;
     }
 }
-
+ 
+ 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SETUP FORM DISTRIBUSI
+// ═══════════════════════════════════════════════════════════════════════════════
+ 
 async function setupFormDistribusi() {
     const form = document.getElementById('form-distribusi');
     if (!form) return;
-
+ 
     const editId = new URLSearchParams(window.location.search).get('id');
-
+ 
+    // Mode edit: pre-fill form
     if (editId) {
         const formTitle = document.querySelector('h3');
         const submitBtn = form.querySelector('button[type="submit"]');
+        
         if (formTitle) formTitle.innerText = "Edit Pengiriman";
-        if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i> SIMPAN PERUBAHAN';
-
+        if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Simpan Perubahan';
+ 
         try {
+            // Fill dropdown dulu, baru load data
             await fillDistribusiDropdowns();
-
+ 
+            // Fetch data shipment
             const data = await API.distribusi.getById(editId);
             const d = data.shipmentById;
-
-            document.getElementById('id_sekolah_dist').value = d.id_sekolah   || '';
-            document.getElementById('id_menu_dist').value    = d.id_menu      || '';
-            document.getElementById('id_dapur_dist').value   = d.id_dapur     || '';
+ 
+            if (!d) {
+                alert("Data pengiriman tidak ditemukan!");
+                window.location.href = 'distribusi.html';
+                return;
+            }
+ 
+            // Fill form dengan data
+            document.getElementById('id_sekolah_dist').value = d.id_sekolah || '';
+            document.getElementById('id_menu_dist').value    = d.id_menu || '';
+            document.getElementById('id_dapur_dist').value   = d.id_dapur || '';
             document.getElementById('jumlah_porsi').value    = d.jumlah_porsi || 0;
             document.getElementById('status_kirim').value    = d.status_kirim || 'Persiapan';
-
+ 
+            // Handle waktu_sampai
             const waktuInput = document.getElementById('waktu_sampai');
             if (waktuInput && d.waktu_sampai) {
-                waktuInput.value = d.waktu_sampai.split('T')[0];
+                try {
+                    const date = new Date(d.waktu_sampai);
+                    if (!isNaN(date.getTime())) {
+                        waktuInput.value = date.toISOString().split('T')[0];
+                    }
+                } catch (e) {
+                    console.warn("[setupFormDistribusi] Invalid waktu_sampai:", d.waktu_sampai);
+                }
             }
+ 
         } catch (err) {
-            console.error("[setupFormDistribusi] Gagal load:", err);
-            alert("Gagal memuat data pengiriman untuk diedit.");
+            console.error("[setupFormDistribusi] Gagal load data:", err);
+            alert("Gagal memuat data pengiriman: " + err.message);
         }
     }
-
+ 
+    // Form submission handler
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-
+ 
         const statusKirim = document.getElementById('status_kirim').value;
         const waktuSampai = document.getElementById('waktu_sampai')?.value;
-
+ 
         const input = {
             id_sekolah:   document.getElementById('id_sekolah_dist').value,
             id_menu:      document.getElementById('id_menu_dist').value,
             id_dapur:     document.getElementById('id_dapur_dist').value,
-            jumlah_porsi: parseInt(document.getElementById('jumlah_porsi').value),
+            jumlah_porsi: parseInt(document.getElementById('jumlah_porsi').value || 0),
             status_kirim: statusKirim,
-            waktu_sampai: statusKirim === 'Diterima'
+            waktu_sampai: statusKirim === 'Diterima' 
                 ? new Date().toISOString().split('T')[0]
                 : (waktuSampai || null)
         };
-
+ 
+        // Validate
+        if (!input.id_sekolah || !input.id_menu || !input.id_dapur) {
+            alert("Sekolah, Menu, dan Dapur harus dipilih!");
+            return;
+        }
+ 
         try {
             if (editId) {
                 await API.distribusi.update(editId, input);
@@ -825,80 +905,85 @@ async function setupFormDistribusi() {
             }
             window.location.href = "distribusi.html";
         } catch (err) {
-            console.error("[setupFormDistribusi] Gagal:", err);
+            console.error("[setupFormDistribusi] Gagal submit:", err);
             alert("Gagal: " + err.message);
         }
     });
 }
-
+ 
+ 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACTION BUTTONS
+// ═══════════════════════════════════════════════════════════════════════════════
+ 
 function editDistribusi(id) {
     window.location.href = `crudDistribusi.html?id=${id}`;
 }
-
+ 
 async function deleteDistribusi(id) {
-    if (!confirm("Hapus data pengiriman ini?")) return;
+    if (!confirm("Hapus data pengiriman ini? Tindakan tidak bisa dibatalkan.")) {
+        return;
+    }
+ 
     try {
         await API.distribusi.delete(id);
         alert("Data pengiriman berhasil dihapus!");
         fetchDistribusi();
     } catch (err) {
         console.error("[deleteDistribusi] Error:", err);
-        alert("Gagal menghapus data pengiriman.");
+        alert("Gagal menghapus data: " + err.message);
     }
 }
-
-
+ 
+ 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DROPDOWN HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
-
-async function fillDapurDropdown() {
-    const dropdown = document.getElementById('id_dapur');
-    if (!dropdown) return;
-    try {
-        const data = await API.dapur.getAll();
-        const list = data.semuaDapur || [];
-        dropdown.innerHTML =
-            '<option value="">-- Pilih Unit Dapur --</option>' +
-            list.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
-    } catch (err) {
-        console.error("[fillDapurDropdown] Error:", err);
-        dropdown.innerHTML = '<option value="">Gagal memuat dapur</option>';
-    }
-}
-
+ 
 async function fillDistribusiDropdowns() {
     const sekolahSelect = document.getElementById('id_sekolah_dist');
     const menuSelect    = document.getElementById('id_menu_dist');
     const dapurSelect   = document.getElementById('id_dapur_dist');
-    if (!sekolahSelect || !menuSelect || !dapurSelect) return;
-
+    
+    // Skip jika tidak ada dropdown (misalnya di halaman list, bukan form)
+    if (!sekolahSelect || !menuSelect || !dapurSelect) {
+        console.warn("[fillDistribusiDropdowns] Dropdown tidak ditemukan, skip.");
+        return;
+    }
+ 
     try {
+        console.log("[fillDistribusiDropdowns] Fetching data...");
+        
+        // Fetch ketiga service secara parallel
         const [sekolahData, menuData, dapurData] = await Promise.all([
             API.sekolah.getAll(),
             API.menu.getAll(),
             API.dapur.getAll()
         ]);
-
-        sekolahSelect.innerHTML =
-            '<option value="">Pilih Sekolah...</option>' +
-            (sekolahData.semuaSekolah || []).map(s =>
-                `<option value="${s.id_sekolah}">${s.nama_sekolah}</option>`
-            ).join('');
-
-        menuSelect.innerHTML =
-            '<option value="">Pilih Menu...</option>' +
-            (menuData.getSemuaMenu || []).map(m =>
-                `<option value="${m.id_menu}">${m.nama_paket}</option>`
-            ).join('');
-
-        dapurSelect.innerHTML =
-            '<option value="">Pilih Dapur...</option>' +
-            (dapurData.semuaDapur || []).map(d =>
-                `<option value="${d.id_dapur}">${d.nama_dapur}</option>`
-            ).join('');
-
+ 
+        const sekolahList = sekolahData.semuaSekolah || [];
+        const menuList    = menuData.getSemuaMenu || [];
+        const dapurList   = dapurData.semuaDapur || [];
+ 
+        console.log(`[fillDistribusiDropdowns] Loaded: ${sekolahList.length} sekolah, ${menuList.length} menu, ${dapurList.length} dapur`);
+ 
+        // Isi sekolah dropdown
+        sekolahSelect.innerHTML = '<option value="">Pilih Sekolah...</option>' +
+            sekolahList.map(s => `<option value="${s.id_sekolah}">${s.nama_sekolah}</option>`).join('');
+ 
+        // Isi menu dropdown
+        menuSelect.innerHTML = '<option value="">Pilih Menu...</option>' +
+            menuList.map(m => `<option value="${m.id_menu}">${m.nama_paket}</option>`).join('');
+ 
+        // Isi dapur dropdown
+        dapurSelect.innerHTML = '<option value="">Pilih Dapur...</option>' +
+            dapurList.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
+ 
     } catch (err) {
         console.error("[fillDistribusiDropdowns] Error:", err);
+        const errorOption = '<option value="">Gagal memuat data</option>';
+        sekolahSelect.innerHTML = errorOption;
+        menuSelect.innerHTML = errorOption;
+        dapurSelect.innerHTML = errorOption;
     }
 }

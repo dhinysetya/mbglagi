@@ -1,19 +1,22 @@
 const { gql } = require('apollo-server-express');
 
 const typeDefs = gql`
-  type Shipment {
-    id_shipment: ID!
-    id_sekolah: ID!
-    id_dapur: ID!
-    id_menu: ID!
-    jumlah_porsi: Int
-    status_kirim: String
-    waktu_sampai: String
+type Shipment {
+  id_shipment: ID!
+  id_sekolah: ID!
+  id_dapur: ID!
+  id_menu: ID!
+  jumlah_porsi: Int
+  status_kirim: String
+  waktu_sampai: String
 
-    nama_sekolah: String
-    nama_dapur: String
-    nama_menu: String
-  }
+  nama_sekolah: String  
+  nama_dapur: String  
+  nama_menu: String  
+  
+  createdAt: String 
+  updatedAt: String 
+}
 
   type StatusResponse {
     isProcessing: Boolean

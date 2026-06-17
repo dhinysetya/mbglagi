@@ -8,7 +8,6 @@ const resolvers = require('./resolvers/dapurResolvers');
 async function startServer() {
   const app = express();
   
-  // Inisialisasi Apollo Server
   const server = new ApolloServer({ 
     typeDefs, 
     resolvers 
@@ -17,14 +16,12 @@ async function startServer() {
   await server.start();
   server.applyMiddleware({ app });
 
-  // Sinkronisasi Database
   try {
-    // Sync model ke database
     await sequelize.authenticate();
     await sequelize.sync({ alter: true }); 
     console.log('✅ Koneksi database Dapur berhasil.');
     
-    // Jalankan Server
+
     const PORT = process.env.PORT || 3001;
     app.listen(PORT, () => {
       console.log(`🚀 Service Dapur berjalan di http://localhost:${PORT}/graphql`);
