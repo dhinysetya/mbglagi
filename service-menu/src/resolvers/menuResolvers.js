@@ -1,5 +1,4 @@
 const { Menu, MenuRecipe } = require('../models/menu');
-const axios = require('axios');
 
 const resolvers = {
   Query: {
@@ -18,20 +17,31 @@ const resolvers = {
       const menu = await Menu.findByPk(id);
       if (!menu) throw new Error("Menu tidak ditemukan");
       await menu.update({ nama_paket, deskripsi });
-      return menu;
+      return await Menu.findByPk(id, { include: [MenuRecipe] });
     },
     deleteMenu: async (_, { id }) => {
       const menu = await Menu.findByPk(id);
       if (!menu) throw new Error("Menu tidak ditemukan");
-
-      const distribusiRes = await axios.get(`http://localhost:3005/api/distribusi/check-menu/${id}`);
-      if (distribusiRes.data.isProcessing) {
-        throw new Error("Menu sedang digunakan dalam distribusi aktif!");
-      }
-
-      await Menu.destroy({ where: { id_menu: id } });
+      // Hapus recipe dulu, baru menu
+      await MenuRecipe.destroy({ where: { id_menu: id } });
+      await menu.destroy();
       return true;
-    }
+    },
+    createMenuRecipe: async (_, { id_menu, id_inventory, jumlah_kebutuhan }) => {
+        return await MenuRecipe.create({
+            id_menu,
+            id_inventory,
+            jumlah_kebutuhan
+        });
+    },
+
+    deleteByMenu: async (_, { id_menu }) => {
+        await MenuRecipe.destroy({
+            where: { id_menu }
+        });
+
+        return true;
+    },
   }
 };
 

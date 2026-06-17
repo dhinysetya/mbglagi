@@ -1,7 +1,8 @@
 /**
  * main.js — Logic Frontend Sistem MBG
  * Semua CRUD menggunakan object API dari api.js (GraphQL).
- * Disesuaikan 100% dengan schema dan api.js.
+ * Diperbaiki: nama dapur di inventory, nama bahan di menu, dropdown bahan baku,
+ *             fillDapurDropdown, edit inventory pakai getInventoryById, dll.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,22 +19,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Panggil semua fetch dengan logging
     fetchDapur();
     fetchSekolah();
     fetchMenu();
     fetchInventory();
     fetchDistribusi();
 
-    // Setup form (hanya akan aktif jika elemen form ada)
     setupFormDapur();
     setupFormSekolah();
     setupFormMenu();
     setupFormInventory();
     setupFormDistribusi();
 
-    // Dropdown helpers
     fillDapurDropdown();
+    fillDapurMenuDropdown();
     fillDistribusiDropdowns();
 });
 
@@ -337,7 +336,7 @@ async function deleteSekolah(id) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MENU
+// MENU — tampilkan nama bahan baku (bukan ID inventory)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function fetchMenu() {
@@ -354,6 +353,17 @@ async function fetchMenu() {
 
         if (countMenu) countMenu.innerText = `${list.length} Menu Terdaftar`;
 
+        // Ambil semua inventory sekaligus untuk resolve nama bahan
+        let inventoryMap = {};
+        try {
+            const invData = await API.inventory.getAll();
+            (invData.getInventories || []).forEach(i => {
+                inventoryMap[i.id_inventory] = i.nama_bahan;
+            });
+        } catch (e) {
+            console.warn("[fetchMenu] Gagal fetch inventory untuk nama bahan:", e.message);
+        }
+
         if (containerGrid) {
             if (list.length === 0) {
                 containerGrid.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-32 opacity-50">
@@ -367,10 +377,12 @@ async function fetchMenu() {
                 containerGrid.innerHTML = list.map(m => {
                     const recipes = m.MenuRecipes || [];
                     const recipeHtml = recipes.length > 0
-                        ? recipes.map(r => `
-                            <span class="text-[9px] bg-gray-50 px-2 py-1 rounded-md text-gray-500 border border-gray-100">
-                                Bahan ID: ${r.id_inventory} (${r.jumlah_kebutuhan})
-                            </span>`).join('')
+                        ? recipes.map(r => {
+                            const namaBahan = inventoryMap[r.id_inventory] || `Bahan #${r.id_inventory}`;
+                            return `<span class="text-[9px] bg-gray-50 px-2 py-1 rounded-md text-gray-500 border border-gray-100">
+                                ${namaBahan} (${r.jumlah_kebutuhan})
+                            </span>`;
+                        }).join('')
                         : '<span class="text-[9px] text-gray-300 italic">Belum ada resep</span>';
 
                     return `
@@ -439,6 +451,9 @@ async function setupFormMenu() {
 
     const editId = document.getElementById('id_menu')?.value || new URLSearchParams(window.location.search).get('id');
 
+    // Isi dropdown bahan baku untuk resep
+    await fillInventoryDropdownsInRecipe();
+
     if (editId) {
         const formTitle = document.querySelector('h3');
         const submitBtn = form.querySelector('button[type="submit"]');
@@ -464,14 +479,44 @@ async function setupFormMenu() {
         const nama_paket = document.getElementById('nama_paket').value;
         const deskripsi  = document.getElementById('deskripsi').value;
         const idMenu     = document.getElementById('id_menu')?.value;
+        const recipes = [];
+
+        document.querySelectorAll(".recipe-row").forEach(row => {
+            const id_inventory = row.querySelector(".select-bahan").value;
+            const jumlah = row.querySelector(".input-jumlah").value;
+
+            if (id_inventory && jumlah) {
+                recipes.push({
+                    id_inventory: parseInt(id_inventory),
+                    jumlah_kebutuhan: parseFloat(jumlah)
+                });
+            }
+        });
 
         try {
             if (idMenu) {
-                await API.menu.update(idMenu, nama_paket, deskripsi);
+                await API.menuRecipe.deleteByMenu(idMenu);
+
+                for (const r of recipes) {
+                    await API.menuRecipe.create({
+                        id_menu: idMenu,
+                        id_inventory: r.id_inventory,
+                        jumlah_kebutuhan: r.jumlah_kebutuhan
+                    });
+                }
                 alert("Menu berhasil diperbarui!");
                 window.location.href = 'menu.html';
             } else {
                 await API.menu.create(nama_paket, deskripsi);
+                const id_menu = result.createMenu.id_menu;
+
+                for (const r of recipes) {
+                    await API.menuRecipe.create({
+                        id_menu,
+                        id_inventory: r.id_inventory,
+                        jumlah_kebutuhan: r.jumlah_kebutuhan
+                    });
+                }
                 alert("Menu berhasil disimpan!");
                 form.reset();
                 fetchMenu();
@@ -498,9 +543,55 @@ async function deleteMenu(id) {
     }
 }
 
+// Helper: isi semua select bahan baku dalam recipe rows
+async function fillInventoryDropdownsInRecipe() {
+    let inventoryList = [];
+    try {
+        const invData = await API.inventory.getAll();
+        inventoryList = invData.getInventories || [];
+    } catch (e) {
+        console.warn("[fillInventoryDropdownsInRecipe] Gagal fetch inventory:", e.message);
+        return;
+    }
+
+    window._inventoryList = inventoryList; // simpan untuk addRecipeRow() nanti
+
+    document.querySelectorAll('.select-bahan').forEach(sel => {
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">Pilih Bahan...</option>' +
+            inventoryList.map(i => `<option value="${i.id_inventory}">${i.nama_bahan} (${i.satuan})</option>`).join('');
+        if (currentVal) sel.value = currentVal;
+    });
+}
+
+// Tambah baris resep baru (dipanggil dari HTML)
+function addRecipeRow() {
+    const container = document.getElementById('recipe-container');
+    if (!container) return;
+
+    const inventoryList = window._inventoryList || [];
+    const optionsHtml = '<option value="">Pilih Bahan...</option>' +
+        inventoryList.map(i => `<option value="${i.id_inventory}">${i.nama_bahan} (${i.satuan})</option>`).join('');
+
+    const row = document.createElement('div');
+    row.className = 'flex gap-2 items-center recipe-row';
+    row.innerHTML = `
+        <select class="select-bahan flex-1 p-3 bg-gray-50 rounded-xl text-xs border-none outline-none focus:ring-2 focus:ring-[#33A1E0]">
+            ${optionsHtml}
+        </select>
+        <input type="number" placeholder="Jml" step="0.01" min="0"
+            class="input-jumlah w-24 p-3 bg-gray-50 rounded-xl text-xs border-none outline-none focus:ring-2 focus:ring-[#33A1E0]">
+        <button type="button" onclick="this.closest('.recipe-row').remove()"
+            class="w-8 h-8 flex-shrink-0 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs">
+            <i class="fa-solid fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(row);
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// INVENTORY
+// INVENTORY — tampilkan nama dapur (bukan ID)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function fetchInventory() {
@@ -510,15 +601,27 @@ async function fetchInventory() {
     if (!containerGrid && !tableBody) return;
 
     try {
-        const data = await API.inventory.getAll();
-        const list = data.getInventories || [];
+        // Fetch inventory dan dapur paralel
+        const [invData, dapurData] = await Promise.all([
+            API.inventory.getAll(),
+            API.dapur.getAll().catch(() => ({ semuaDapur: [] }))
+        ]);
+        const list = invData.getInventories || [];
+        const dapurList = dapurData.semuaDapur || [];
+
+        // Buat map id_dapur → nama_dapur
+        const dapurMap = {};
+        dapurList.forEach(d => { dapurMap[d.id_dapur] = d.nama_dapur; });
+
         console.log("[fetchInventory] Data diterima:", list);
 
         if (containerGrid) {
             if (list.length === 0) {
                 containerGrid.innerHTML = `<div class="col-span-full py-20 text-center opacity-50 text-gray-400">Belum ada bahan baku terdaftar.</div>`;
             } else {
-                containerGrid.innerHTML = list.map(i => `
+                containerGrid.innerHTML = list.map(i => {
+                    const namaDapur = dapurMap[i.id_dapur] || `Dapur #${i.id_dapur}`;
+                    return `
                     <div class="bg-white p-6 rounded-[30px] shadow-sm border border-gray-100 hover:shadow-md transition-all">
                         <div class="flex justify-between items-start mb-4">
                             <div class="bg-blue-50 p-3 rounded-xl">
@@ -528,7 +631,7 @@ async function fetchInventory() {
                         </div>
                         <h3 class="text-lg font-bold text-[#113F67] mb-1">${i.nama_bahan}</h3>
                         <p class="text-xs text-gray-400 mb-4 flex items-center gap-1">
-                            <i class="fa-solid fa-kitchen-set text-[#33A1E0]"></i> Dapur ID: ${i.id_dapur}
+                            <i class="fa-solid fa-kitchen-set text-[#33A1E0]"></i> ${namaDapur}
                         </p>
                         <div class="flex justify-between items-center pt-4 border-t border-gray-50">
                             <div>
@@ -538,7 +641,8 @@ async function fetchInventory() {
                             <span class="text-[10px] bg-green-50 text-green-600 font-bold px-3 py-1 rounded-full uppercase">${i.satuan}</span>
                         </div>
                     </div>
-                `).join('');
+                `;
+                }).join('');
             }
         }
 
@@ -546,12 +650,14 @@ async function fetchInventory() {
             if (list.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="4" class="px-8 py-10 text-center text-gray-400">Belum ada bahan baku terdaftar.</td></tr>`;
             } else {
-                tableBody.innerHTML = list.map(i => `
+                tableBody.innerHTML = list.map(i => {
+                    const namaDapur = dapurMap[i.id_dapur] || `Dapur #${i.id_dapur}`;
+                    return `
                     <tr class="hover:bg-gray-50 transition-colors text-sm">
                         <td class="px-8 py-5 font-bold text-[#113F67]">${i.nama_bahan}</td>
                         <td class="px-8 py-5">
                             <span class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg">
-                                <i class="fa-solid fa-house-chimney text-[10px] mr-1"></i> Dapur #${i.id_dapur}
+                                <i class="fa-solid fa-house-chimney text-[10px] mr-1"></i> ${namaDapur}
                             </span>
                         </td>
                         <td class="px-8 py-5 text-center">
@@ -571,7 +677,8 @@ async function fetchInventory() {
                             </div>
                         </td>
                     </tr>
-                `).join('');
+                `;
+                }).join('');
             }
         }
 
@@ -589,6 +696,9 @@ async function setupFormInventory() {
 
     const editId = new URLSearchParams(window.location.search).get('id');
 
+    // Selalu isi dropdown dapur dulu
+    await fillDapurDropdown();
+
     if (editId) {
         const formTitle = document.querySelector('h3');
         const submitBtn = form.querySelector('button[type="submit"]');
@@ -596,10 +706,9 @@ async function setupFormInventory() {
         if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Simpan Perubahan';
 
         try {
-            await fillDapurDropdown();
-
-            const allData = await API.inventory.getAll();
-            const i = allData.getInventories.find(x => String(x.id_inventory) === String(editId));
+            // Gunakan getInventoryById (bukan cari manual dari getAll)
+            const invData = await API.inventory.getById(editId);
+            const i = invData.getInventoryById;
             if (!i) throw new Error(`Inventory ID ${editId} tidak ditemukan`);
 
             document.getElementById('id_dapur').value   = i.id_dapur   || '';
@@ -634,9 +743,14 @@ async function setupFormInventory() {
                     stok:       stok,
                     satuan:     document.getElementById('satuan').value
                 };
+                if (!input.id_dapur) {
+                    alert("Pilih unit dapur terlebih dahulu!");
+                    return;
+                }
                 await API.inventory.create(input);
                 alert("Bahan Baku berhasil disimpan!");
                 form.reset();
+                await fillDapurDropdown();
                 fetchInventory();
             }
         } catch (err) {
@@ -676,94 +790,98 @@ async function fetchDistribusi() {
         console.warn("[fetchDistribusi] Tidak ada container/tbody, skip.");
         return;
     }
- 
+
     try {
-        const data = await API.distribusi.getAll();
-        const list = data.allShipments || [];
-        
+        const [distData, sekolahData, dapurData, menuData] = await Promise.all([
+            API.distribusi.getAll(),
+            API.sekolah.getAll(),
+            API.dapur.getAll(),
+            API.menu.getAll()
+        ]);
+
+        const list = distData.allShipments || [];
+
+        const sekolahMap = {};
+        (sekolahData.semuaSekolah || []).forEach(s => {
+            sekolahMap[s.id_sekolah] = s.nama_sekolah;
+        });
+
+        const dapurMap = {};
+        (dapurData.semuaDapur || []).forEach(d => {
+            dapurMap[d.id_dapur] = d.nama_dapur;
+        });
+
+        const menuMap = {};
+        (menuData.getSemuaMenu || []).forEach(m => {
+            menuMap[m.id_menu] = m.nama_paket;
+        });
         console.log("[fetchDistribusi] Data diterima:", list);
- 
+
         if (list.length === 0) {
-            const emptyMsg = `<div class="col-span-full py-10 text-center text-gray-400">Belum ada pengiriman.</div>`;
-            if (containerGrid) containerGrid.innerHTML = emptyMsg;
+            if (containerGrid) containerGrid.innerHTML = `<div class="col-span-full py-10 text-center text-gray-400">Belum ada pengiriman.</div>`;
             if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="px-8 py-10 text-center text-gray-400">Belum ada data distribusi.</td></tr>`;
             return;
         }
- 
-        // Render ke grid container
+
         if (containerGrid) {
             containerGrid.innerHTML = list.map(d => {
-                // Format nama dengan fallback yang lebih smart
-                const namaSekolah = d.nama_sekolah ? d.nama_sekolah : `Sekolah ID: ${d.id_sekolah}`;
-                const namaMenu    = d.nama_menu ? d.nama_menu : `Menu ID: ${d.id_menu}`;
-                const namaDapur   = d.nama_dapur ? d.nama_dapur : `Dapur ID: ${d.id_dapur}`;
+                const namaSekolah =
+                    d.nama_sekolah ||
+                    sekolahMap[d.id_sekolah] ||
+                    "-";
+                const namaMenu =
+                    d.nama_menu ||
+                    menuMap[d.id_menu] ||
+                    "-";
+                const namaDapur =
+                    d.nama_dapur ||
+                    dapurMap[d.id_dapur] ||
+                    "-";
                 
-                // Format tanggal dengan error handling
                 let tanggalTiba = 'Belum ada estimasi';
-                if (d.waktu_sampai && d.waktu_sampai !== null && d.waktu_sampai !== 'null') {
+                if (d.waktu_sampai) {
                     try {
                         const date = new Date(d.waktu_sampai);
-                        if (!isNaN(date.getTime())) {
-                            tanggalTiba = date.toLocaleDateString('id-ID');
-                        }
-                    } catch (e) {
-                        console.warn(`[fetchDistribusi] Invalid date for shipment ${d.id_shipment}:`, d.waktu_sampai);
-                    }
+                        if (!isNaN(date.getTime())) tanggalTiba = date.toLocaleDateString('id-ID');
+                    } catch (e) {}
                 }
-                
-                // Format tanggal dibuat
+
                 let tanggalDibuat = 'Baru saja';
-                if (d.createdAt && d.createdAt !== null && d.createdAt !== 'null') {
+                if (d.createdAt) {
                     try {
                         const date = new Date(d.createdAt);
-                        if (!isNaN(date.getTime())) {
-                            tanggalDibuat = date.toLocaleDateString('id-ID');
-                        }
-                    } catch (e) {
-                        console.warn(`[fetchDistribusi] Invalid createdAt for shipment ${d.id_shipment}:`, d.createdAt);
-                    }
+                        if (!isNaN(date.getTime())) tanggalDibuat = date.toLocaleDateString('id-ID');
+                    } catch (e) {}
                 }
                 
                 const status = d.status_kirim ? d.status_kirim.toUpperCase() : 'PROSES';
- 
+
                 return `
                     <div class="bg-white p-8 rounded-[35px] shadow-sm border border-gray-100 hover:shadow-lg transition-all">
                         <div class="flex justify-between items-start mb-4">
-                            <span class="bg-blue-50 text-[#33A1E0] text-[10px] font-black px-3 py-1 rounded-full uppercase">
-                                ${status}
-                            </span>
+                            <span class="bg-blue-50 text-[#33A1E0] text-[10px] font-black px-3 py-1 rounded-full uppercase">${status}</span>
                             <p class="text-xs text-gray-400">Dibuat: ${tanggalDibuat}</p>
                         </div>
-                        
                         <h3 class="text-xl font-black text-[#113F67] mb-1">${namaSekolah}</h3>
                         <p class="text-sm text-gray-500 mb-2 italic">${namaMenu}</p>
-                        
                         <p class="text-xs text-gray-400 mb-3 flex items-center gap-1">
-                            <i class="fa-solid fa-clock text-[#33A1E0]"></i> 
-                            Estimasi Tiba: ${tanggalTiba}
+                            <i class="fa-solid fa-clock text-[#33A1E0]"></i> Estimasi Tiba: ${tanggalTiba}
                         </p>
-                        
                         <div class="flex justify-between items-center pt-4 border-t border-gray-50">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-box-open text-gray-300"></i>
                                 <span class="font-bold text-[#113F67]">${d.jumlah_porsi || 0} Porsi</span>
                             </div>
-                            
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center gap-1 text-xs text-gray-400">
-                                    <i class="fa-solid fa-shop"></i> 
-                                    <span>${namaDapur}</span>
+                                    <i class="fa-solid fa-shop"></i> <span>${namaDapur}</span>
                                 </div>
-                                
                                 <button onclick="editDistribusi(${d.id_shipment})" 
-                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center"
-                                    title="Edit">
+                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center">
                                     <i class="fa-solid fa-pencil text-xs"></i>
                                 </button>
-                                
                                 <button onclick="deleteDistribusi(${d.id_shipment})" 
-                                    class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-                                    title="Hapus">
+                                    class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
                             </div>
@@ -772,14 +890,13 @@ async function fetchDistribusi() {
                 `;
             }).join('');
         }
- 
-        // Render ke table (jika ada)
+
         if (tableBody) {
             tableBody.innerHTML = list.map(d => {
-                const namaSekolah = d.nama_sekolah ? d.nama_sekolah : `ID: ${d.id_sekolah}`;
-                const namaMenu    = d.nama_menu ? d.nama_menu : `ID: ${d.id_menu}`;
-                const status      = d.status_kirim ? d.status_kirim : 'Persiapan';
- 
+                const namaSekolah = d.nama_sekolah || `ID: ${d.id_sekolah}`;
+                const namaMenu    = d.nama_menu    || `ID: ${d.id_menu}`;
+                const status      = d.status_kirim || 'Persiapan';
+
                 return `
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-8 py-4 font-bold text-[#113F67]">${namaSekolah}</td>
@@ -804,80 +921,63 @@ async function fetchDistribusi() {
                 `;
             }).join('');
         }
- 
+
     } catch (err) {
         console.error("[fetchDistribusi] Error:", err);
-        const errorMsg = `<div class="col-span-full text-center text-red-500 py-10">Gagal memuat: ${err.message}</div>`;
-        if (containerGrid) containerGrid.innerHTML = errorMsg;
+        if (containerGrid) containerGrid.innerHTML = `<div class="col-span-full text-center text-red-500 py-10">Gagal memuat: ${err.message}</div>`;
     }
 }
- 
- 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SETUP FORM DISTRIBUSI
-// ═══════════════════════════════════════════════════════════════════════════════
- 
+
 async function setupFormDistribusi() {
     const form = document.getElementById('form-distribusi');
     if (!form) return;
- 
+
     const editId = new URLSearchParams(window.location.search).get('id');
- 
-    // Mode edit: pre-fill form
+
     if (editId) {
         const formTitle = document.querySelector('h3');
         const submitBtn = form.querySelector('button[type="submit"]');
-        
         if (formTitle) formTitle.innerText = "Edit Pengiriman";
         if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Simpan Perubahan';
- 
+
         try {
-            // Fill dropdown dulu, baru load data
             await fillDistribusiDropdowns();
- 
-            // Fetch data shipment
+
             const data = await API.distribusi.getById(editId);
             const d = data.shipmentById;
- 
+
             if (!d) {
                 alert("Data pengiriman tidak ditemukan!");
                 window.location.href = 'distribusi.html';
                 return;
             }
- 
-            // Fill form dengan data
+
             document.getElementById('id_sekolah_dist').value = d.id_sekolah || '';
-            document.getElementById('id_menu_dist').value    = d.id_menu || '';
-            document.getElementById('id_dapur_dist').value   = d.id_dapur || '';
+            document.getElementById('id_menu_dist').value    = d.id_menu    || '';
+            document.getElementById('id_dapur_dist').value   = d.id_dapur   || '';
             document.getElementById('jumlah_porsi').value    = d.jumlah_porsi || 0;
             document.getElementById('status_kirim').value    = d.status_kirim || 'Persiapan';
- 
-            // Handle waktu_sampai
+
             const waktuInput = document.getElementById('waktu_sampai');
             if (waktuInput && d.waktu_sampai) {
                 try {
                     const date = new Date(d.waktu_sampai);
-                    if (!isNaN(date.getTime())) {
-                        waktuInput.value = date.toISOString().split('T')[0];
-                    }
-                } catch (e) {
-                    console.warn("[setupFormDistribusi] Invalid waktu_sampai:", d.waktu_sampai);
-                }
+                    if (!isNaN(date.getTime())) waktuInput.value = date.toISOString().split('T')[0];
+                } catch (e) {}
             }
- 
+
         } catch (err) {
             console.error("[setupFormDistribusi] Gagal load data:", err);
             alert("Gagal memuat data pengiriman: " + err.message);
         }
     }
- 
-    // Form submission handler
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
- 
+
         const statusKirim = document.getElementById('status_kirim').value;
         const waktuSampai = document.getElementById('waktu_sampai')?.value;
- 
+
         const input = {
             id_sekolah:   document.getElementById('id_sekolah_dist').value,
             id_menu:      document.getElementById('id_menu_dist').value,
@@ -888,13 +988,12 @@ async function setupFormDistribusi() {
                 ? new Date().toISOString().split('T')[0]
                 : (waktuSampai || null)
         };
- 
-        // Validate
+
         if (!input.id_sekolah || !input.id_menu || !input.id_dapur) {
             alert("Sekolah, Menu, dan Dapur harus dipilih!");
             return;
         }
- 
+
         try {
             if (editId) {
                 await API.distribusi.update(editId, input);
@@ -910,21 +1009,13 @@ async function setupFormDistribusi() {
         }
     });
 }
- 
- 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ACTION BUTTONS
-// ═══════════════════════════════════════════════════════════════════════════════
- 
+
 function editDistribusi(id) {
     window.location.href = `crudDistribusi.html?id=${id}`;
 }
- 
+
 async function deleteDistribusi(id) {
-    if (!confirm("Hapus data pengiriman ini? Tindakan tidak bisa dibatalkan.")) {
-        return;
-    }
- 
+    if (!confirm("Hapus data pengiriman ini? Tindakan tidak bisa dibatalkan.")) return;
     try {
         await API.distribusi.delete(id);
         alert("Data pengiriman berhasil dihapus!");
@@ -934,56 +1025,86 @@ async function deleteDistribusi(id) {
         alert("Gagal menghapus data: " + err.message);
     }
 }
- 
- 
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DROPDOWN HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
- 
+
+// Untuk form inventory (select#id_dapur)
+async function fillDapurDropdown() {
+    const sel = document.getElementById('id_dapur');
+    if (!sel) return;
+
+    try {
+        const data = await API.dapur.getAll();
+        const list = data.semuaDapur || [];
+        sel.innerHTML = '<option value="">Pilih Unit Dapur...</option>' +
+            list.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
+        console.log("[fillDapurDropdown] Loaded", list.length, "dapur");
+    } catch (err) {
+        console.error("[fillDapurDropdown] Error:", err);
+        sel.innerHTML = '<option value="">Gagal memuat dapur</option>';
+    }
+}
+
+// Untuk form menu (select#id_dapur_menu) — opsional jika ada di HTML
+async function fillDapurMenuDropdown() {
+    const sel = document.getElementById('id_dapur_menu');
+    if (!sel) return;
+
+    try {
+        const data = await API.dapur.getAll();
+        const list = data.semuaDapur || [];
+        sel.innerHTML = '<option value="">Pilih Unit Dapur...</option>' +
+            list.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
+        console.log("[fillDapurMenuDropdown] Loaded", list.length, "dapur");
+    } catch (err) {
+        console.error("[fillDapurMenuDropdown] Error:", err);
+        sel.innerHTML = '<option value="">Gagal memuat dapur</option>';
+    }
+}
+
+// Untuk form distribusi
 async function fillDistribusiDropdowns() {
     const sekolahSelect = document.getElementById('id_sekolah_dist');
     const menuSelect    = document.getElementById('id_menu_dist');
     const dapurSelect   = document.getElementById('id_dapur_dist');
     
-    // Skip jika tidak ada dropdown (misalnya di halaman list, bukan form)
     if (!sekolahSelect || !menuSelect || !dapurSelect) {
         console.warn("[fillDistribusiDropdowns] Dropdown tidak ditemukan, skip.");
         return;
     }
- 
+
     try {
         console.log("[fillDistribusiDropdowns] Fetching data...");
         
-        // Fetch ketiga service secara parallel
         const [sekolahData, menuData, dapurData] = await Promise.all([
             API.sekolah.getAll(),
             API.menu.getAll(),
             API.dapur.getAll()
         ]);
- 
+
         const sekolahList = sekolahData.semuaSekolah || [];
-        const menuList    = menuData.getSemuaMenu || [];
-        const dapurList   = dapurData.semuaDapur || [];
- 
+        const menuList    = menuData.getSemuaMenu    || [];
+        const dapurList   = dapurData.semuaDapur     || [];
+
         console.log(`[fillDistribusiDropdowns] Loaded: ${sekolahList.length} sekolah, ${menuList.length} menu, ${dapurList.length} dapur`);
- 
-        // Isi sekolah dropdown
+
         sekolahSelect.innerHTML = '<option value="">Pilih Sekolah...</option>' +
             sekolahList.map(s => `<option value="${s.id_sekolah}">${s.nama_sekolah}</option>`).join('');
- 
-        // Isi menu dropdown
+
         menuSelect.innerHTML = '<option value="">Pilih Menu...</option>' +
             menuList.map(m => `<option value="${m.id_menu}">${m.nama_paket}</option>`).join('');
- 
-        // Isi dapur dropdown
+
         dapurSelect.innerHTML = '<option value="">Pilih Dapur...</option>' +
             dapurList.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
- 
+
     } catch (err) {
         console.error("[fillDistribusiDropdowns] Error:", err);
         const errorOption = '<option value="">Gagal memuat data</option>';
         sekolahSelect.innerHTML = errorOption;
-        menuSelect.innerHTML = errorOption;
-        dapurSelect.innerHTML = errorOption;
+        menuSelect.innerHTML    = errorOption;
+        dapurSelect.innerHTML   = errorOption;
     }
 }

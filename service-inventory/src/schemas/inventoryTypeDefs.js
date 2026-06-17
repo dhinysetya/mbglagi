@@ -12,6 +12,7 @@ const inventoryTypeDefs = `#graphql
   type Query {
     getInventories: [Inventory]
     getInventoryByDapur(id_dapur: Int!): [Inventory]
+    getInventoryById(id_inventory: ID!): Inventory
   }
 
   type Mutation {

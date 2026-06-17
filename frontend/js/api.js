@@ -2,10 +2,10 @@
  * api.js — Konfigurasi GraphQL untuk Sistem MBG
  * Disesuaikan 100% dengan schema tiap microservice.
  *
- * DAPUR     → port 3001  (DapurInput, dapurById, updateDapur, deleteDapur→Boolean)
- * MENU      → port 3002  (flat params, getMenuById(id:Int!), deleteMenu(id:Int!))
- * SEKOLAH   → port 3003  (SekolahInput & UpdateSekolahInput terpisah, sekolahById)
- * INVENTORY → port 3004  (flat params, getInventories, updateInventory→stok only)
+ * DAPUR     → port 3001  (DapurInput, dapurById(id_dapur), updateDapur, deleteDapur→Boolean)
+ * MENU      → port 3002  (flat params, getMenuById(id:Int!), deleteMenu(id:Int!)→Boolean)
+ * SEKOLAH   → port 3003  (SekolahInput & UpdateSekolahInput terpisah, sekolahById(id_sekolah))
+ * INVENTORY → port 3004  (flat params, getInventories, getInventoryById, updateInventory→stok only)
  * DISTRIBUSI→ port 3005  (allShipments, shipmentById(id), createShipment, updateShipment, deleteShipment)
  */
 
@@ -34,8 +34,6 @@ async function gql(endpoint, query, variables = {}) {
 const API = {
 
     // ── DAPUR ──────────────────────────────────────────────────────────────────
-    // Query : semuaDapur | dapurById(id_dapur: ID!)
-    // Mutation: createDapur(input: DapurInput!) | updateDapur(id_dapur,input) | deleteDapur(id_dapur)→Boolean
     dapur: {
         getAll: () => gql(GRAPHQL.DAPUR, `
             query {
@@ -77,7 +75,6 @@ const API = {
             }
         `, { id_dapur, input }),
 
-        // deleteDapur → Boolean (bukan String/MessageResponse)
         delete: (id_dapur) => gql(GRAPHQL.DAPUR, `
             mutation($id_dapur: ID!) {
                 deleteDapur(id_dapur: $id_dapur)
@@ -86,9 +83,6 @@ const API = {
     },
 
     // ── SEKOLAH ────────────────────────────────────────────────────────────────
-    // Query : semuaSekolah | sekolahById(id_sekolah: ID!)
-    // Mutation: createSekolah(input: SekolahInput!) | updateSekolah(id_sekolah, input: UpdateSekolahInput!) | deleteSekolah→Boolean
-    // UpdateSekolahInput hanya: nama_sekolah, alamat_sekolah, jumlah_siswa  (TIDAK ada npsn & jenjang)
     sekolah: {
         getAll: () => gql(GRAPHQL.SEKOLAH, `
             query {
@@ -125,7 +119,6 @@ const API = {
             }
         `, { input }),
 
-        // update memakai UpdateSekolahInput (bukan SekolahInput) — hanya 3 field
         update: (id_sekolah, input) => gql(GRAPHQL.SEKOLAH, `
             mutation($id_sekolah: ID!, $input: UpdateSekolahInput!) {
                 updateSekolah(id_sekolah: $id_sekolah, input: $input) {
@@ -143,11 +136,6 @@ const API = {
     },
 
     // ── MENU ───────────────────────────────────────────────────────────────────
-    // Query : getSemuaMenu | getMenuById(id: Int!)
-    // Mutation: createMenu(nama_paket, deskripsi) | updateMenu(id, nama_paket, deskripsi) | deleteMenu(id: Int!)→Boolean
-    // CATATAN: schema Menu TIDAK punya id_dapur dan TIDAK bisa simpan MenuRecipes lewat mutation ini.
-    //          MenuRecipe hanya punya: id_recipe, id_menu, id_inventory, jumlah_kebutuhan
-    //          (tidak ada nama_bahan / satuan di schema Menu service)
     menu: {
         getAll: () => gql(GRAPHQL.MENU, `
             query {
@@ -163,6 +151,41 @@ const API = {
                 }
             }
         `),
+        menuRecipe: {
+
+            create: ({ id_menu, id_inventory, jumlah_kebutuhan }) =>
+                gql(GRAPHQL.MENU, `
+                    mutation(
+                        $id_menu:Int!,
+                        $id_inventory:Int!,
+                        $jumlah_kebutuhan:Float!
+                    ){
+                        createMenuRecipe(
+                            id_menu:$id_menu,
+                            id_inventory:$id_inventory,
+                            jumlah_kebutuhan:$jumlah_kebutuhan
+                        ){
+                            id_recipe
+                        }
+                    }
+                `,{
+                    id_menu,
+                    id_inventory,
+                    jumlah_kebutuhan
+                }),
+
+            deleteByMenu:(id_menu)=>
+                gql(GRAPHQL.MENU,`
+                    mutation($id_menu:Int!){
+                        deleteMenuRecipeByMenu(
+                            id_menu:$id_menu
+                        )
+                    }
+                `,{
+                    id_menu
+                })
+
+        },
 
         getById: (id) => gql(GRAPHQL.MENU, `
             query($id: Int!) {
@@ -179,7 +202,6 @@ const API = {
             }
         `, { id: parseInt(id) }),
 
-        // flat params — tidak ada input object
         create: (nama_paket, deskripsi) => gql(GRAPHQL.MENU, `
             mutation($nama_paket: String!, $deskripsi: String) {
                 createMenu(nama_paket: $nama_paket, deskripsi: $deskripsi) {
@@ -189,7 +211,6 @@ const API = {
             }
         `, { nama_paket, deskripsi }),
 
-        // flat params — tidak ada input object, tidak ada MenuRecipes
         update: (id, nama_paket, deskripsi) => gql(GRAPHQL.MENU, `
             mutation($id: Int!, $nama_paket: String, $deskripsi: String) {
                 updateMenu(id: $id, nama_paket: $nama_paket, deskripsi: $deskripsi) {
@@ -204,11 +225,10 @@ const API = {
                 deleteMenu(id: $id)
             }
         `, { id: parseInt(id) })
+        
     },
 
     // ── INVENTORY ──────────────────────────────────────────────────────────────
-    // Query : getInventories | getInventoryByDapur(id_dapur: Int!)
-    // Mutation: createInventory(flat) | updateInventory(id_inventory, stok)→Inventory | deleteInventory(id_inventory)→String
     inventory: {
         getAll: () => gql(GRAPHQL.INVENTORY, `
             query {
@@ -221,6 +241,18 @@ const API = {
                 }
             }
         `),
+
+        getById: (id_inventory) => gql(GRAPHQL.INVENTORY, `
+            query($id_inventory: ID!) {
+                getInventoryById(id_inventory: $id_inventory) {
+                    id_inventory
+                    id_dapur
+                    nama_bahan
+                    stok
+                    satuan
+                }
+            }
+        `, { id_inventory: String(id_inventory) }),
 
         getByDapur: (id_dapur) => gql(GRAPHQL.INVENTORY, `
             query($id_dapur: Int!) {
@@ -243,7 +275,6 @@ const API = {
             }
         `, { id_dapur: parseInt(id_dapur), nama_bahan, stok: parseFloat(stok), satuan }),
 
-        // schema updateInventory hanya terima stok
         update: (id_inventory, stok) => gql(GRAPHQL.INVENTORY, `
             mutation($id_inventory: ID!, $stok: Float!) {
                 updateInventory(id_inventory: $id_inventory, stok: $stok) {
@@ -261,12 +292,6 @@ const API = {
     },
 
     // ── DISTRIBUSI (Shipment) ──────────────────────────────────────────────────
-    // Query : allShipments | shipmentById(id: ID!)
-    // Mutation: createShipment(flat, pakai "status" bukan "status_kirim")
-    //           updateShipment(id, flat, pakai "status") → MessageResponse {message}
-    //           deleteShipment(id) → MessageResponse {message}
-    // Field Shipment: id_shipment, id_sekolah, id_dapur, id_menu, jumlah_porsi,
-    //                 status_kirim, waktu_sampai, nama_sekolah, nama_dapur, nama_menu
     distribusi: {
         getAll: () => gql(GRAPHQL.DISTRIBUSI, `
             query {
@@ -286,7 +311,7 @@ const API = {
                 }
             }
         `),
- 
+
         getById: (id) => gql(GRAPHQL.DISTRIBUSI, `
             query($id: ID!) {
                 shipmentById(id: $id) {
@@ -305,8 +330,7 @@ const API = {
                 }
             }
         `, { id }),
- 
-        // "status" bukan "status_kirim" — sesuai nama param di schema createShipment
+
         create: ({ id_sekolah, id_dapur, id_menu, jumlah_porsi, status_kirim, waktu_sampai }) =>
             gql(GRAPHQL.DISTRIBUSI, `
                 mutation(
@@ -331,11 +355,10 @@ const API = {
             `, {
                 id_sekolah, id_dapur, id_menu,
                 jumlah_porsi: parseInt(jumlah_porsi),
-                status: status_kirim,   // mapping: status_kirim → status
+                status: status_kirim,
                 waktu_sampai: waktu_sampai || null
             }),
- 
-        // updateShipment → MessageResponse {message}, param "id" dan "status"
+
         update: (id, { id_sekolah, id_dapur, id_menu, jumlah_porsi, status_kirim, waktu_sampai }) =>
             gql(GRAPHQL.DISTRIBUSI, `
                 mutation(
@@ -365,8 +388,7 @@ const API = {
                 status: status_kirim,
                 waktu_sampai: waktu_sampai || null
             }),
- 
-        // deleteShipment(id) → MessageResponse {message}
+
         delete: (id) => gql(GRAPHQL.DISTRIBUSI, `
             mutation($id: ID!) {
                 deleteShipment(id: $id) {

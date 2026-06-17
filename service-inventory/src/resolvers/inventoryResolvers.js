@@ -9,6 +9,11 @@ const inventoryResolvers = {
       return await Inventory.findAll({
         where: { id_dapur }
       });
+    },
+    getInventoryById: async (_, { id_inventory }) => {
+      const item = await Inventory.findByPk(id_inventory);
+      if (!item) throw new Error(`Inventory ID ${id_inventory} tidak ditemukan`);
+      return item;
     }
   },
   Mutation: {
