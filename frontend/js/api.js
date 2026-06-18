@@ -151,8 +151,8 @@ const API = {
                 }
             }
         `),
+        
         menuRecipe: {
-
             create: ({ id_menu, id_inventory, jumlah_kebutuhan }) =>
                 gql(GRAPHQL.MENU, `
                     mutation(
@@ -168,23 +168,22 @@ const API = {
                             id_recipe
                         }
                     }
-                `,{
+                `, {
                     id_menu,
                     id_inventory,
                     jumlah_kebutuhan
                 }),
 
-            deleteByMenu:(id_menu)=>
-                gql(GRAPHQL.MENU,`
+            deleteByMenu: (id_menu) =>
+                gql(GRAPHQL.MENU, `
                     mutation($id_menu:Int!){
-                        deleteMenuRecipeByMenu(
+                        deleteByMenu(
                             id_menu:$id_menu
                         )
                     }
-                `,{
+                `, {
                     id_menu
                 })
-
         },
 
         getById: (id) => gql(GRAPHQL.MENU, `
@@ -225,7 +224,6 @@ const API = {
                 deleteMenu(id: $id)
             }
         `, { id: parseInt(id) })
-        
     },
 
     // ── INVENTORY ──────────────────────────────────────────────────────────────

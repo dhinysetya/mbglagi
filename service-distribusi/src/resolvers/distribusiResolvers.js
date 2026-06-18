@@ -2,7 +2,7 @@ const Shipment = require('../models/shipment');
 const axios = require('axios');
 
 const axiosConfig = {
-  headers: { 
+  headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
@@ -11,7 +11,6 @@ const axiosConfig = {
 
 async function enrichShipment(shipData) {
   const [sekolahRes, dapurRes, menuRes] = await Promise.all([
-    // Service Sekolah — argumen id_sekolah (BUKAN id)
     axios.post(`${process.env.URL_SERVICE_SEKOLAH}/graphql`, {
       query: `
         query GetSekolah($id_sekolah: ID!) {
@@ -25,8 +24,7 @@ async function enrichShipment(shipData) {
       console.warn(`[enrichShipment] Gagal fetch sekolah ${shipData.id_sekolah}:`, err.message);
       return null;
     }),
-    
-    // Service Dapur — argumen id_dapur (sesuai schema dapurById)
+
     axios.post(`${process.env.URL_SERVICE_DAPUR}/graphql`, {
       query: `
         query GetDapur($id_dapur: ID!) {
@@ -40,8 +38,7 @@ async function enrichShipment(shipData) {
       console.warn(`[enrichShipment] Gagal fetch dapur ${shipData.id_dapur}:`, err.message);
       return null;
     }),
-    
-    // Service Menu — argumen id (Int!)
+
     axios.post(`${process.env.URL_SERVICE_MENU}/graphql`, {
       query: `
         query GetMenu($id: Int!) {
@@ -98,7 +95,8 @@ const resolvers = {
         const activeShipment = await Shipment.findOne({
           where: {
             id_menu: id_menu,
-            status_kirim: ['Persiapan', 'Proses', 'Pending', 'Dikirim']
+            // FIX: gunakan ENUM values yang valid sesuai model shipment.js
+            status_kirim: ['Persiapan', 'Memasak', 'Perjalanan']
           }
         });
         return { isProcessing: !!activeShipment };
@@ -144,7 +142,7 @@ const resolvers = {
         }
         if (args.waktu_sampai != null) updateData.waktu_sampai = args.waktu_sampai;
 
-        const result = await Shipment.update(updateData, { 
+        const result = await Shipment.update(updateData, {
           where: { id_shipment: id },
           returning: true
         });

@@ -30,7 +30,7 @@ async function startServer() {
         res.send(`🚀 Service Inventory (${process.env.DB_NAME}) sedang berjalan...`);
     });
 
-    const PORT = process.env.PORT || 5001;
+    const PORT = process.env.PORT || 3004;  // FIX: was 5001, should be 3004
 
     try {
         await sequelize.sync({ alter: true });
