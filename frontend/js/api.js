@@ -1,12 +1,11 @@
 /**
  * api.js — Konfigurasi GraphQL untuk Sistem MBG
  * Disesuaikan 100% dengan schema tiap microservice.
- *
- * DAPUR     → port 3001  (DapurInput, dapurById(id_dapur), updateDapur, deleteDapur→Boolean)
- * MENU      → port 3002  (flat params, getMenuById(id:Int!), deleteMenu(id:Int!)→Boolean)
- * SEKOLAH   → port 3003  (SekolahInput & UpdateSekolahInput terpisah, sekolahById(id_sekolah))
- * INVENTORY → port 3004  (flat params, getInventories, getInventoryById, updateInventory→stok only)
- * DISTRIBUSI→ port 3005  (allShipments, shipmentById(id), createShipment, updateShipment, deleteShipment)
+ * * DAPUR      → port 3001
+ * MENU       → port 3002
+ * SEKOLAH    → port 3003
+ * INVENTORY  → port 3004
+ * DISTRIBUSI → port 3005
  */
 
 const GRAPHQL = {
@@ -32,7 +31,6 @@ async function gql(endpoint, query, variables = {}) {
 }
 
 const API = {
-
     // ── DAPUR ──────────────────────────────────────────────────────────────────
     dapur: {
         getAll: () => gql(GRAPHQL.DAPUR, `
@@ -55,7 +53,7 @@ const API = {
                     kapasitas_porsi
                 }
             }
-        `, { id_dapur }),
+        `, { id_dapur: String(id_dapur) }),
 
         create: (input) => gql(GRAPHQL.DAPUR, `
             mutation($input: DapurInput!) {
@@ -73,13 +71,13 @@ const API = {
                     nama_dapur
                 }
             }
-        `, { id_dapur, input }),
+        `, { id_dapur: String(id_dapur), input }),
 
         delete: (id_dapur) => gql(GRAPHQL.DAPUR, `
             mutation($id_dapur: ID!) {
                 deleteDapur(id_dapur: $id_dapur)
             }
-        `, { id_dapur })
+        `, { id_dapur: String(id_dapur) })
     },
 
     // ── SEKOLAH ────────────────────────────────────────────────────────────────
@@ -108,7 +106,7 @@ const API = {
                     jumlah_siswa
                 }
             }
-        `, { id_sekolah }),
+        `, { id_sekolah: String(id_sekolah) }),
 
         create: (input) => gql(GRAPHQL.SEKOLAH, `
             mutation($input: SekolahInput!) {
@@ -126,13 +124,13 @@ const API = {
                     nama_sekolah
                 }
             }
-        `, { id_sekolah, input }),
+        `, { id_sekolah: String(id_sekolah), input }),
 
         delete: (id_sekolah) => gql(GRAPHQL.SEKOLAH, `
             mutation($id_sekolah: ID!) {
                 deleteSekolah(id_sekolah: $id_sekolah)
             }
-        `, { id_sekolah })
+        `, { id_sekolah: String(id_sekolah) })
     },
 
     // ── MENU ───────────────────────────────────────────────────────────────────
@@ -151,40 +149,6 @@ const API = {
                 }
             }
         `),
-        
-        menuRecipe: {
-            create: ({ id_menu, id_inventory, jumlah_kebutuhan }) =>
-                gql(GRAPHQL.MENU, `
-                    mutation(
-                        $id_menu:Int!,
-                        $id_inventory:Int!,
-                        $jumlah_kebutuhan:Float!
-                    ){
-                        createMenuRecipe(
-                            id_menu:$id_menu,
-                            id_inventory:$id_inventory,
-                            jumlah_kebutuhan:$jumlah_kebutuhan
-                        ){
-                            id_recipe
-                        }
-                    }
-                `, {
-                    id_menu,
-                    id_inventory,
-                    jumlah_kebutuhan
-                }),
-
-            deleteByMenu: (id_menu) =>
-                gql(GRAPHQL.MENU, `
-                    mutation($id_menu:Int!){
-                        deleteByMenu(
-                            id_menu:$id_menu
-                        )
-                    }
-                `, {
-                    id_menu
-                })
-        },
 
         getById: (id) => gql(GRAPHQL.MENU, `
             query($id: Int!) {
@@ -206,6 +170,7 @@ const API = {
                 createMenu(nama_paket: $nama_paket, deskripsi: $deskripsi) {
                     id_menu
                     nama_paket
+                    deskripsi
                 }
             }
         `, { nama_paket, deskripsi }),
@@ -224,6 +189,29 @@ const API = {
                 deleteMenu(id: $id)
             }
         `, { id: parseInt(id) })
+    },
+
+    // ── MENU RECIPE ────────────────────────────────────────────────────────────
+    menuRecipe: {
+        create: ({ id_menu, id_inventory, jumlah_kebutuhan }) =>
+            gql(GRAPHQL.MENU, `
+                mutation($id_menu: Int!, $id_inventory: Int!, $jumlah_kebutuhan: Float!){
+                    createMenuRecipe(id_menu: $id_menu, id_inventory: $id_inventory, jumlah_kebutuhan: $jumlah_kebutuhan){
+                        id_recipe
+                    }
+                }
+            `, {
+                id_menu: parseInt(id_menu),
+                id_inventory: parseInt(id_inventory),
+                jumlah_kebutuhan: parseFloat(jumlah_kebutuhan)
+            }),
+
+        deleteByMenu: (id_menu) =>
+            gql(GRAPHQL.MENU, `
+                mutation($id_menu: Int!){
+                    deleteByMenu(id_menu: $id_menu)
+                }
+            `, { id_menu: parseInt(id_menu) })
     },
 
     // ── INVENTORY ──────────────────────────────────────────────────────────────
@@ -280,13 +268,13 @@ const API = {
                     stok
                 }
             }
-        `, { id_inventory, stok: parseFloat(stok) }),
+        `, { id_inventory: String(id_inventory), stok: parseFloat(stok) }),
 
         delete: (id_inventory) => gql(GRAPHQL.INVENTORY, `
             mutation($id_inventory: ID!) {
                 deleteInventory(id_inventory: $id_inventory)
             }
-        `, { id_inventory })
+        `, { id_inventory: String(id_inventory) })
     },
 
     // ── DISTRIBUSI (Shipment) ──────────────────────────────────────────────────
@@ -327,31 +315,19 @@ const API = {
                     updatedAt
                 }
             }
-        `, { id }),
+        `, { id: String(id) }),
 
         create: ({ id_sekolah, id_dapur, id_menu, jumlah_porsi, status_kirim, waktu_sampai }) =>
             gql(GRAPHQL.DISTRIBUSI, `
-                mutation(
-                    $id_sekolah: ID!
-                    $id_dapur: ID!
-                    $id_menu: ID!
-                    $jumlah_porsi: Int
-                    $status: String
-                    $waktu_sampai: String
-                ) {
-                    createShipment(
-                        id_sekolah: $id_sekolah
-                        id_dapur: $id_dapur
-                        id_menu: $id_menu
-                        jumlah_porsi: $jumlah_porsi
-                        status: $status
-                        waktu_sampai: $waktu_sampai
-                    ) {
+                mutation($id_sekolah: ID!, $id_dapur: ID!, $id_menu: ID!, $jumlah_porsi: Int, $status: String, $waktu_sampai: String) {
+                    createShipment(id_sekolah: $id_sekolah, id_dapur: $id_dapur, id_menu: $id_menu, jumlah_porsi: $jumlah_porsi, status: $status, waktu_sampai: $waktu_sampai) {
                         id_shipment
                     }
                 }
             `, {
-                id_sekolah, id_dapur, id_menu,
+                id_sekolah: String(id_sekolah),
+                id_dapur: String(id_dapur),
+                id_menu: String(id_menu),
                 jumlah_porsi: parseInt(jumlah_porsi),
                 status: status_kirim,
                 waktu_sampai: waktu_sampai || null
@@ -359,29 +335,16 @@ const API = {
 
         update: (id, { id_sekolah, id_dapur, id_menu, jumlah_porsi, status_kirim, waktu_sampai }) =>
             gql(GRAPHQL.DISTRIBUSI, `
-                mutation(
-                    $id: ID!
-                    $id_sekolah: ID
-                    $id_dapur: ID
-                    $id_menu: ID
-                    $jumlah_porsi: Int
-                    $status: String
-                    $waktu_sampai: String
-                ) {
-                    updateShipment(
-                        id: $id
-                        id_sekolah: $id_sekolah
-                        id_dapur: $id_dapur
-                        id_menu: $id_menu
-                        jumlah_porsi: $jumlah_porsi
-                        status: $status
-                        waktu_sampai: $waktu_sampai
-                    ) {
+                mutation($id: ID!, $id_sekolah: ID, $id_dapur: ID, $id_menu: ID, $jumlah_porsi: Int, $status: String, $waktu_sampai: String) {
+                    updateShipment(id: $id, id_sekolah: $id_sekolah, id_dapur: $id_dapur, id_menu: $id_menu, jumlah_porsi: $jumlah_porsi, status: $status, waktu_sampai: $waktu_sampai) {
                         message
                     }
                 }
             `, {
-                id, id_sekolah, id_dapur, id_menu,
+                id: String(id),
+                id_sekolah: id_sekolah ? String(id_sekolah) : null,
+                id_dapur: id_dapur ? String(id_dapur) : null,
+                id_menu: id_menu ? String(id_menu) : null,
                 jumlah_porsi: jumlah_porsi ? parseInt(jumlah_porsi) : null,
                 status: status_kirim,
                 waktu_sampai: waktu_sampai || null
@@ -393,7 +356,7 @@ const API = {
                     message
                 }
             }
-        `, { id })
+        `, { id: String(id) })
     }
 };
 

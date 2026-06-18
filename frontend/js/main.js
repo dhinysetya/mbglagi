@@ -1,6 +1,9 @@
 /**
  * main.js — Logic Frontend Sistem MBG
  * Semua CRUD menggunakan object API dari api.js (GraphQL).
+ * Diperbaiki: Sinkronisasi tipe data Integer (parseInt) untuk semua ID,
+ * Fix return data pada penambahan resep menu baru,
+ * Fix uppercase untuk enum jenjang sekolah.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -74,10 +77,16 @@ async function fetchDapur() {
                                 <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Kapasitas</p>
                                 <p class="font-bold text-[#113F67]">${k.kapasitas_porsi} Porsi</p>
                             </div>
-                            <button onclick="deleteDapur(${k.id_dapur})" 
-                                class="w-10 h-10 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="editDapur(${k.id_dapur})" 
+                                    class="w-10 h-10 rounded-xl bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center">
+                                    <i class="fa-solid fa-pencil text-xs"></i>
+                                </button>
+                                <button onclick="deleteDapur(${k.id_dapur})" 
+                                    class="w-10 h-10 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `).join('');
@@ -136,7 +145,7 @@ async function setupFormDapur() {
         if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Simpan Perubahan';
 
         try {
-            const data = await API.dapur.getById(editId);
+            const data = await API.dapur.getById(parseInt(editId));
             const k = data.dapurById;
             document.getElementById('nama_dapur').value      = k.nama_dapur      || '';
             document.getElementById('kapasitas_porsi').value = k.kapasitas_porsi  || 0;
@@ -158,7 +167,7 @@ async function setupFormDapur() {
 
         try {
             if (editId) {
-                await API.dapur.update(editId, input);
+                await API.dapur.update(parseInt(editId), input);
                 alert("Unit Dapur berhasil diperbarui!");
                 window.location.href = 'dapur.html';
             } else {
@@ -177,7 +186,7 @@ async function setupFormDapur() {
 async function deleteDapur(id) {
     if (!confirm('Hapus unit dapur ini?')) return;
     try {
-        await API.dapur.delete(id);
+        await API.dapur.delete(parseInt(id));
         fetchDapur();
     } catch (err) {
         console.error("[deleteDapur] Error:", err);
@@ -275,15 +284,34 @@ async function setupFormSekolah() {
         if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Simpan Perubahan';
 
         try {
-            const data = await API.sekolah.getById(editId);
-            const s = data.sekolahById;
-            document.getElementById('npsn').value           = s.npsn            || '';
-            document.getElementById('nama_sekolah').value   = s.nama_sekolah    || '';
-            document.getElementById('jenjang').value        = s.jenjang         || 'SD';
-            document.getElementById('jumlah_siswa').value   = s.jumlah_siswa    || 0;
-            document.getElementById('alamat_sekolah').value = s.alamat_sekolah  || '';
+            const data = await API.sekolah.getById(String(editId));
+            
+            // ANTI-CRASH: Cek apakah datanya ada di dalam properti sekolahById ATAU langsung di objek data itu sendiri
+            let s = null;
+            if (data) {
+                if (data.sekolahById) {
+                    s = data.sekolahById;
+                } else if (data.data && data.data.sekolahById) {
+                    s = data.data.sekolahById;
+                } else {
+                    s = data;
+                }
+            }
+
+            if (s) {
+                document.getElementById('npsn').value           = s.npsn           || '';
+                document.getElementById('nama_sekolah').value   = s.nama_sekolah   || '';
+                document.getElementById('jenjang').value        = s.jenjang        || 'SD';
+                document.getElementById('jumlah_siswa').value   = s.jumlah_siswa   || 0;
+                document.getElementById('alamat_sekolah').value = s.alamat_sekolah || '';
+                
+                // Kunci input NPSN agar user tahu NPSN tidak boleh diedit (karena dilarang UpdateSekolahInput)
+                document.getElementById('npsn').disabled = true;
+            } else {
+                console.error("[setupFormSekolah] Data sekolah tidak ditemukan dalam response:", data);
+            }
         } catch (err) {
-            console.error("[setupFormSekolah] Gagal load:", err);
+            console.error("[setupFormSekolah] Gagal load data sekolah:", err);
             alert("Gagal memuat data sekolah untuk diedit.");
         }
     }
@@ -294,25 +322,34 @@ async function setupFormSekolah() {
         const input = {
             npsn:           document.getElementById('npsn').value,
             nama_sekolah:   document.getElementById('nama_sekolah').value,
-            jenjang:        document.getElementById('jenjang').value,
-            jumlah_siswa:   parseInt(document.getElementById('jumlah_siswa').value),
+            jenjang:        document.getElementById('jenjang').value.toUpperCase(),
+            jumlah_siswa:   parseInt(document.getElementById('jumlah_siswa').value || 0),
             alamat_sekolah: document.getElementById('alamat_sekolah').value
         };
 
         try {
             if (editId) {
-                await API.sekolah.update(editId, input);
+                // Salin objek input dan BUANG npsn karena dilarang oleh UpdateSekolahInput di backend
+                const updatePayload = { ...input };
+                delete updatePayload.npsn;
+
+                await API.sekolah.update(String(editId), updatePayload);
                 alert("Data Sekolah berhasil diperbarui!");
                 window.location.href = 'sekolah.html';
             } else {
                 await API.sekolah.create(input);
                 alert("Sekolah berhasil ditambahkan!");
-                form.reset();
-                fetchSekolah();
+                window.location.href = 'sekolah.html';
             }
         } catch (err) {
             console.error("[setupFormSekolah] Gagal simpan:", err);
-            alert("Gagal memproses data sekolah.");
+            
+            // Pengaman pembacaan error agar tidak memicu "Cannot read properties of undefined"
+            let msg = err.message;
+            if (err.response && err.response.data && err.response.data.errors && err.response.data.errors[0]) {
+                msg = err.response.data.errors[0].message;
+            }
+            alert("Gagal memproses data sekolah: " + msg);
         }
     });
 }
@@ -324,7 +361,7 @@ function editSekolah(id) {
 async function deleteSekolah(id) {
     if (!confirm('Hapus data sekolah ini?')) return;
     try {
-        await API.sekolah.delete(id);
+        await API.sekolah.delete(parseInt(id));
         fetchSekolah();
     } catch (err) {
         console.error("[deleteSekolah] Error:", err);
@@ -334,7 +371,7 @@ async function deleteSekolah(id) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MENU — Tampilkan Nama Bahan Baku & Komposisi Resep Dinamis
+// MENU — tampilkan nama bahan baku (bukan ID inventory)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function fetchMenu() {
@@ -396,20 +433,49 @@ async function fetchMenu() {
                         </div>
                         <div class="flex justify-end gap-2 mt-4">
                             <button onclick="editMenu(${m.id_menu})" 
-                                class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-all">
-                                <i class="fa-solid fa-pencil text-xs"></i>
+                                class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
                             </button>
                             <button onclick="deleteMenu(${m.id_menu})" 
-                                class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all">
+                                class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
-                    </div>`;
-                }).join('');
+                    </div>
+                `}).join('');
             }
         }
+
+        if (tableBody) {
+            if (list.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="3" class="px-8 py-10 text-center text-gray-400 italic">Belum ada menu.</td></tr>`;
+            } else {
+                tableBody.innerHTML = list.map(m => `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-8 py-4 font-bold text-[#113F67]">${m.nama_paket}</td>
+                        <td class="px-8 py-4 text-xs text-gray-500">${m.deskripsi || '-'}</td>
+                        <td class="px-8 py-4 text-center">
+                            <div class="flex justify-center gap-2">
+                                <button onclick="editMenu(${m.id_menu})" 
+                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                </button>
+                                <button onclick="deleteMenu(${m.id_menu})" 
+                                    class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
     } catch (err) {
         console.error("[fetchMenu] Error:", err);
+        if (containerGrid) {
+            containerGrid.innerHTML = `<div class="col-span-full text-center text-red-500 py-10">Gagal memuat data menu: ${err.message}</div>`;
+        }
     }
 }
 
@@ -417,161 +483,242 @@ async function setupFormMenu() {
     const form = document.getElementById('form-menu');
     if (!form) return;
 
-    const editId = new URLSearchParams(window.location.search).get('id');
+    const editId = document.getElementById('id_menu')?.value || new URLSearchParams(window.location.search).get('id');
+
+    await fillInventoryDropdownsInRecipe();
 
     if (editId) {
         const formTitle = document.querySelector('h3');
         const submitBtn = form.querySelector('button[type="submit"]');
-        if (formTitle) formTitle.innerText = "Edit Menu & Resep";
+        if (formTitle) formTitle.innerText = "Edit Menu";
         if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Simpan Perubahan';
 
         try {
-            const data = await API.menu.getById(editId);
+            const data = await API.menu.getById(parseInt(editId));
             const m = data.getMenuById;
-            
-            document.getElementById('nama_paket').value = m.nama_paket;
-            document.getElementById('deskripsi').value = m.deskripsi || '';
-            
-            const container = document.getElementById('recipe-container');
-            if (container) container.innerHTML = '';
-            
-            if (m.MenuRecipes && m.MenuRecipes.length > 0) {
-                for (const r of m.MenuRecipes) {
-                    await addRecipeRow(r.id_inventory, r.jumlah_kebutuhan);
-                }
-            } else {
-                await addRecipeRow();
-            }
+            document.getElementById('nama_paket').value = m.nama_paket || '';
+            document.getElementById('deskripsi').value   = m.deskripsi || '';
+            const hiddenId = document.getElementById('id_menu');
+            if (hiddenId) hiddenId.value = m.id_menu;
         } catch (err) {
-            console.error("[setupFormMenu] Gagal load data edit:", err);
-            alert("Gagal memuat data menu.");
+            console.error("[setupFormMenu] Gagal load:", err);
+            alert("Gagal memuat data menu untuk diedit.");
         }
     }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
         const nama_paket = document.getElementById('nama_paket').value;
-        const deskripsi = document.getElementById('deskripsi').value;
+        const deskripsi  = document.getElementById('deskripsi').value;
+        const idMenu     = document.getElementById('id_menu')?.value;
+        const recipes = [];
+
+        document.querySelectorAll(".recipe-row").forEach(row => {
+            const id_inventory = row.querySelector(".select-bahan").value;
+            const jumlah = row.querySelector(".input-jumlah").value;
+
+            if (id_inventory && jumlah) {
+                recipes.push({
+                    id_inventory: parseInt(id_inventory),
+                    jumlah_kebutuhan: parseFloat(jumlah)
+                });
+            }
+        });
 
         try {
-            let id_menu = editId;
+            if (idMenu) {
+                if (API.menuRecipe && typeof API.menuRecipe.deleteByMenu === "function") {
+                    await API.menuRecipe.deleteByMenu(parseInt(idMenu));
+                }
 
-            if (editId) {
-                await API.menu.update(editId, nama_paket, deskripsi);
-                await API.menu.menuRecipe.deleteByMenu(parseInt(editId));
-            } else {
-                const dataMenu = await API.menu.create(nama_paket, deskripsi);
-                id_menu = dataMenu.createMenu.id_menu;
-            }
-
-            const rows = document.querySelectorAll('.recipe-row');
-            for (const row of rows) {
-                const id_inventory = row.querySelector('.recipe-inventory').value;
-                const jumlah_kebutuhan = row.querySelector('.recipe-qty').value;
-
-                if (id_inventory && jumlah_kebutuhan) {
-                    await API.menu.menuRecipe.create({
-                        id_menu: parseInt(id_menu),
-                        id_inventory: parseInt(id_inventory),
-                        jumlah_kebutuhan: parseFloat(jumlah_kebutuhan)
+                for (const r of recipes) {
+                    await API.menuRecipe.create({
+                        id_menu: parseInt(idMenu),
+                        id_inventory: r.id_inventory,
+                        jumlah_kebutuhan: r.jumlah_kebutuhan
                     });
                 }
-            }
+                alert("Menu berhasil diperbarui!");
+                window.location.href = 'menu.html';
+            } else {
+                const result = await API.menu.create(nama_paket, deskripsi);
+                const id_menu = result.createMenu.id_menu;
 
-            alert(editId ? "Menu & Resep diperbarui!" : "Menu & Resep berhasil disimpan!");
-            window.location.href = 'menu.html';
+                for (const r of recipes) {
+                    await API.menuRecipe.create({
+                        id_menu: parseInt(id_menu),
+                        id_inventory: r.id_inventory,
+                        jumlah_kebutuhan: r.jumlah_kebutuhan
+                    });
+                }
+                alert("Menu berhasil disimpan!");
+                form.reset();
+                fetchMenu();
+            }
         } catch (err) {
-            console.error("[setupFormMenu] Gagal menyimpan:", err);
+            console.error("[setupFormMenu] Gagal:", err);
             alert("Error: " + err.message);
         }
     });
 }
 
-async function addRecipeRow(selectedInventoryId = '', qty = '') {
-    const container = document.getElementById('recipe-container');
-    if (!container) return;
-
-    const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
-    let optionsHtml = '<option value="">-- Pilih Bahan --</option>';
-    try {
-        const invData = await API.inventory.getAll();
-        const listBahan = invData.getInventories || [];
-        optionsHtml += listBahan.map(i => `
-            <option value="${i.id_inventory}" ${String(i.id_inventory) === String(selectedInventoryId) ? 'selected' : ''}>
-                ${i.nama_bahan} (${i.satuan})
-            </option>
-        `).join('');
-    } catch (e) {
-        console.error(e);
-    }
-
-    const div = document.createElement('div');
-    div.id = rowId;
-    div.className = "recipe-row flex gap-2 items-center mb-2";
-    div.innerHTML = `
-        <select required class="recipe-inventory flex-1 p-3 bg-gray-50 rounded-xl border-none text-xs focus:ring-2 focus:ring-[#33A1E0]">
-            ${optionsHtml}
-        </select>
-        <input type="number" step="0.01" placeholder="Jumlah" required value="${qty}"
-            class="recipe-qty w-24 p-3 bg-gray-50 rounded-xl border-none text-xs focus:ring-2 focus:ring-[#33A1E0]">
-        <button type="button" onclick="document.getElementById('${rowId}').remove()" class="text-red-400 hover:text-red-600 px-2">
-            <i class="fa-solid fa-trash"></i>
-        </button>
-    `;
-    container.appendChild(div);
-}
-
-function editMenu(id) {
+async function editMenu(id) {
     window.location.href = `crudMenu.html?id=${id}`;
 }
 
 async function deleteMenu(id) {
-    if (!confirm('Hapus menu ini beserta seluruh resepnya?')) return;
+    if (!confirm('Hapus menu ini?')) return;
     try {
-        await API.menu.menuRecipe.deleteByMenu(parseInt(id));
-        await API.menu.delete(id);
+        await API.menu.delete(parseInt(id));
         fetchMenu();
     } catch (err) {
-        alert("Gagal menghapus: " + err.message);
+        console.error("[deleteMenu] Error:", err);
+        alert("Gagal menghapus menu.");
     }
+}
+
+async function fillInventoryDropdownsInRecipe() {
+    let inventoryList = [];
+    try {
+        const invData = await API.inventory.getAll();
+        inventoryList = invData.getInventories || [];
+    } catch (e) {
+        console.warn("[fillInventoryDropdownsInRecipe] Gagal fetch inventory:", e.message);
+        return;
+    }
+
+    window._inventoryList = inventoryList;
+
+    document.querySelectorAll('.select-bahan').forEach(sel => {
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">Pilih Bahan...</option>' +
+            inventoryList.map(i => `<option value="${i.id_inventory}">${i.nama_bahan} (${i.satuan})</option>`).join('');
+        if (currentVal) sel.value = currentVal;
+    });
+}
+
+function addRecipeRow() {
+    const container = document.getElementById('recipe-container');
+    if (!container) return;
+
+    const inventoryList = window._inventoryList || [];
+    const optionsHtml = '<option value="">Pilih Bahan...</option>' +
+        inventoryList.map(i => `<option value="${i.id_inventory}">${i.nama_bahan} (${i.satuan})</option>`).join('');
+
+    const row = document.createElement('div');
+    row.className = 'flex gap-2 items-center recipe-row';
+    row.innerHTML = `
+        <select class="select-bahan flex-1 p-3 bg-gray-50 rounded-xl text-xs border-none outline-none focus:ring-2 focus:ring-[#33A1E0]">
+            ${optionsHtml}
+        </select>
+        <input type="number" placeholder="Jml" step="0.01" min="0"
+            class="input-jumlah w-24 p-3 bg-gray-50 rounded-xl text-xs border-none outline-none focus:ring-2 focus:ring-[#33A1E0]">
+        <button type="button" onclick="this.closest('.recipe-row').remove()"
+            class="w-8 h-8 flex-shrink-0 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs">
+            <i class="fa-solid fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(row);
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// INVENTORY
+// INVENTORY — tampilkan nama dapur (bukan ID)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function fetchInventory() {
-    const tableBody = document.getElementById('table-body-inventory');
-    if (!tableBody) return;
+    console.log("[fetchInventory] Dipanggil...");
+    const containerGrid = document.getElementById('inventory-container');
+    const tableBody     = document.getElementById('table-body-inventory');
+    if (!containerGrid && !tableBody) return;
 
     try {
-        const data = await API.inventory.getAll();
-        const list = data.getInventories || [];
+        const [invData, dapurData] = await Promise.all([
+            API.inventory.getAll(),
+            API.dapur.getAll().catch(() => ({ semuaDapur: [] }))
+        ]);
+        const list = invData.getInventories || [];
+        const dapurList = dapurData.semuaDapur || [];
 
-        let dapurMap = {};
-        try {
-            const dData = await API.dapur.getAll();
-            (dData.semuaDapur || []).forEach(d => dapurMap[d.id_dapur] = d.nama_dapur);
-        } catch (e) { console.warn(e); }
+        const dapurMap = {};
+        dapurList.forEach(d => { dapurMap[d.id_dapur] = d.nama_dapur; });
 
-        if (list.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="4" class="px-8 py-10 text-center text-gray-400">Stok kosong.</td></tr>`;
-            return;
+        console.log("[fetchInventory] Data diterima:", list);
+
+        if (containerGrid) {
+            if (list.length === 0) {
+                containerGrid.innerHTML = `<div class="col-span-full py-20 text-center opacity-50 text-gray-400">Belum ada bahan baku terdaftar.</div>`;
+            } else {
+                containerGrid.innerHTML = list.map(i => {
+                    const namaDapur = dapurMap[i.id_dapur] || `Dapur #${i.id_dapur}`;
+                    return `
+                    <div class="bg-white p-6 rounded-[30px] shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="bg-blue-50 p-3 rounded-xl">
+                                <i class="fa-solid fa-boxes-stacked text-[#113F67] text-lg"></i>
+                            </div>
+                            <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest">ID: ${i.id_inventory}</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-[#113F67] mb-1">${i.nama_bahan}</h3>
+                        <p class="text-xs text-gray-400 mb-4 flex items-center gap-1">
+                            <i class="fa-solid fa-kitchen-set text-[#33A1E0]"></i> ${namaDapur}
+                        </p>
+                        <div class="flex justify-between items-center pt-4 border-t border-gray-50">
+                            <div>
+                                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Stok Tersedia</p>
+                                <p class="font-black text-[#113F67]">${i.stok} <span class="text-xs font-normal text-gray-400">${i.satuan}</span></p>
+                            </div>
+                            <span class="text-[10px] bg-green-50 text-green-600 font-bold px-3 py-1 rounded-full uppercase">${i.satuan}</span>
+                        </div>
+                    </div>
+                `;
+                }).join('');
+            }
         }
 
-        tableBody.innerHTML = list.map(i => `
-            <tr class="hover:bg-gray-50 transition-colors text-sm">
-                <td class="px-8 py-4 font-bold text-[#113F67]">${i.nama_bahan}</td>
-                <td class="px-8 py-4 text-gray-500">${dapurMap[i.id_dapur] || `Dapur ID: ${i.id_dapur}`}</td>
-                <td class="px-8 py-4 font-semibold text-center">${i.stok} <span class="text-xs text-gray-400 font-normal">${i.satuan}</span></td>
-                <td class="px-8 py-4 text-center">
-                    <button onclick="editInventory(${i.id_inventory})" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"><i class="fa-solid fa-pencil text-xs"></i></button>
-                    <button onclick="deleteInventory(${i.id_inventory})" class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all"><i class="fa-solid fa-trash-can text-xs"></i></button>
-                </td>
-            </tr>
-        `).join('');
-    } catch (err) { console.error(err); }
+        if (tableBody) {
+            if (list.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="px-8 py-10 text-center text-gray-400">Belum ada bahan baku terdaftar.</td></tr>`;
+            } else {
+                tableBody.innerHTML = list.map(i => {
+                    const namaDapur = dapurMap[i.id_dapur] || `Dapur #${i.id_dapur}`;
+                    return `
+                    <tr class="hover:bg-gray-50 transition-colors text-sm">
+                        <td class="px-8 py-5 font-bold text-[#113F67]">${i.nama_bahan}</td>
+                        <td class="px-8 py-5">
+                            <span class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg">
+                                <i class="fa-solid fa-house-chimney text-[10px] mr-1"></i> ${namaDapur}
+                            </span>
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            <span class="font-black text-[#113F67]">${i.stok}</span>
+                            <span class="text-[10px] text-gray-400 uppercase"> ${i.satuan}</span>
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            <div class="flex justify-center gap-2">
+                                <button onclick="editInventory(${i.id_inventory})" 
+                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
+                                    <i class="fa-solid fa-pencil text-xs"></i>
+                                </button>
+                                <button onclick="deleteInventory(${i.id_inventory})" 
+                                    class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                }).join('');
+            }
+        }
+
+    } catch (err) {
+        console.error("[fetchInventory] Error:", err);
+        if (containerGrid) {
+            containerGrid.innerHTML = `<div class="col-span-full text-center text-red-500 py-10">Gagal memuat data inventory: ${err.message}</div>`;
+        }
+    }
 }
 
 async function setupFormInventory() {
@@ -580,41 +727,65 @@ async function setupFormInventory() {
 
     const editId = new URLSearchParams(window.location.search).get('id');
 
+    await fillDapurDropdown();
+
     if (editId) {
-        document.getElementById('id_dapur').disabled = true;
-        document.getElementById('nama_bahan').disabled = true;
-        document.getElementById('satuan').disabled = true;
+        const formTitle = document.querySelector('h3');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (formTitle) formTitle.innerText = "Edit Bahan Baku";
+        if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Simpan Perubahan';
 
         try {
-            const res = await API.inventory.getById(editId);
-            const iv = res.getInventoryById;
-            document.getElementById('id_dapur').value = iv.id_dapur;
-            document.getElementById('nama_bahan').value = iv.nama_bahan;
-            document.getElementById('stok').value = iv.stok;
-            document.getElementById('satuan').value = iv.satuan;
-        } catch (e) { alert("Gagal memuat inventory."); }
+            const invData = await API.inventory.getById(parseInt(editId));
+            const i = invData.getInventoryById;
+            if (!i) throw new Error(`Inventory ID ${editId} tidak ditemukan`);
+
+            document.getElementById('id_dapur').value   = i.id_dapur   || '';
+            document.getElementById('nama_bahan').value = i.nama_bahan  || '';
+            document.getElementById('stok').value       = i.stok        || 0;
+            document.getElementById('satuan').value     = i.satuan      || 'kg';
+
+            document.getElementById('id_dapur').disabled   = true;
+            document.getElementById('nama_bahan').disabled = true;
+            document.getElementById('satuan').disabled     = true;
+
+        } catch (err) {
+            console.error("[setupFormInventory] Gagal load:", err);
+            alert("Gagal memuat data inventori untuk diedit.");
+        }
     }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
         const stok = parseFloat(document.getElementById('stok').value);
 
         try {
             if (editId) {
-                await API.inventory.update(editId, stok);
+                await API.inventory.update(parseInt(editId), stok);
                 alert("Stok berhasil diperbarui!");
+                window.location.href = 'inventory.html';
             } else {
                 const input = {
-                    id_dapur: document.getElementById('id_dapur').value,
+                    id_dapur:   parseInt(document.getElementById('id_dapur').value),
                     nama_bahan: document.getElementById('nama_bahan').value,
-                    stok: stok,
-                    satuan: document.getElementById('satuan').value
+                    stok:       stok,
+                    satuan:     document.getElementById('satuan').value
                 };
+                if (!input.id_dapur) {
+                    alert("Pilih unit dapur terlebih dahulu!");
+                    return;
+                }
                 await API.inventory.create(input);
-                alert("Bahan baku ditambahkan!");
+                alert("Bahan Baku berhasil disimpan!");
+                form.reset();
+                await fillDapurDropdown();
+                fetchInventory();
             }
-            window.location.href = 'inventory.html';
-        } catch (err) { alert("Gagal menyimpan stok."); }
+        } catch (err) {
+            console.error("[setupFormInventory] Gagal simpan:", err);
+            alert("Gagal menyimpan bahan baku: " + err.message);
+        }
     });
 }
 
@@ -625,50 +796,156 @@ function editInventory(id) {
 async function deleteInventory(id) {
     if (!confirm('Hapus bahan baku ini?')) return;
     try {
-        await API.inventory.delete(id);
+        await API.inventory.delete(parseInt(id));
         fetchInventory();
-    } catch (e) { alert("Gagal hapus."); }
+    } catch (err) {
+        console.error("[deleteInventory] Error:", err);
+        alert("Gagal menghapus bahan baku.");
+    }
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DISTRIBUSI (SHIPMENT)
+// DISTRIBUSI
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function fetchDistribusi() {
-    const tableBody = document.getElementById('table-body-distribusi');
-    if (!tableBody) return;
+    console.log("[fetchDistribusi] Dipanggil...");
+    
+    const containerGrid = document.getElementById('distribusi-container');
+    const tableBody     = document.getElementById('table-body-distribusi');
+    
+    if (!containerGrid && !tableBody) {
+        console.warn("[fetchDistribusi] Tidak ada container/tbody, skip.");
+        return;
+    }
 
     try {
-        const data = await API.distribusi.getAll();
-        const list = data.allShipments || [];
+        const [distData, sekolahData, dapurData, menuData] = await Promise.all([
+            API.distribusi.getAll(),
+            API.sekolah.getAll(),
+            API.dapur.getAll(),
+            API.menu.getAll()
+        ]);
+
+        const list = distData.allShipments || [];
+
+        const sekolahMap = {};
+        (sekolahData.semuaSekolah || []).forEach(s => {
+            sekolahMap[s.id_sekolah] = s.nama_sekolah;
+        });
+
+        const dapurMap = {};
+        (dapurData.semuaDapur || []).forEach(d => {
+            dapurMap[d.id_dapur] = d.nama_dapur;
+        });
+
+        const menuMap = {};
+        (menuData.getSemuaMenu || []).forEach(m => {
+            menuMap[m.id_menu] = m.nama_paket;
+        });
+        console.log("[fetchDistribusi] Data diterima:", list);
 
         if (list.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="6" class="px-8 py-10 text-center text-gray-400">Belum ada pengiriman.</td></tr>`;
+            if (containerGrid) containerGrid.innerHTML = `<div class="col-span-full py-10 text-center text-gray-400">Belum ada pengiriman.</div>`;
+            if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="px-8 py-10 text-center text-gray-400">Belum ada data distribusi.</td></tr>`;
             return;
         }
 
-        tableBody.innerHTML = list.map(sh => {
-            let badgeColor = "bg-yellow-550 text-yellow-600";
-            if (sh.status_kirim === "Selesai" || sh.status_kirim === "Diterima") badgeColor = "bg-green-50 text-green-600";
-            if (sh.status_kirim === "Batal") badgeColor = "bg-red-50 text-red-600";
+        if (containerGrid) {
+            containerGrid.innerHTML = list.map(d => {
+                const namaSekolah = d.nama_sekolah || sekolahMap[d.id_sekolah] || "-";
+                const namaMenu    = d.nama_menu    || menuMap[d.id_menu] || "-";
+                const namaDapur   = d.nama_dapur   || dapurMap[d.id_dapur] || "-";
+                
+                let tanggalTiba = 'Belum ada estimasi';
+                if (d.waktu_sampai) {
+                    try {
+                        const date = new Date(d.waktu_sampai);
+                        if (!isNaN(date.getTime())) tanggalTiba = date.toLocaleDateString('id-ID');
+                    } catch (e) {}
+                }
 
-            return `
-                <tr class="hover:bg-gray-50 transition-colors text-sm">
-                    <td class="px-8 py-4 font-bold text-[#113F67]">${sh.nama_sekolah || `ID: ${sh.id_sekolah}`}</td>
-                    <td class="px-8 py-4 text-gray-500">${sh.nama_dapur || `ID: ${sh.id_dapur}`}</td>
-                    <td class="px-8 py-4 text-gray-600">${sh.nama_menu || `ID: ${sh.id_menu}`}</td>
-                    <td class="px-8 py-4 text-center font-bold">${sh.jumlah_porsi}</td>
-                    <td class="px-8 py-4 text-center">
-                        <span class="px-3 py-1 text-[11px] font-bold rounded-full ${badgeColor}">${sh.status_kirim}</span>
-                    </td>
-                    <td class="px-8 py-4 text-center">
-                        <button onclick="editDistribusi('${sh.id_shipment}')" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"><i class="fa-solid fa-pencil text-xs"></i></button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    } catch (e) { console.error(e); }
+                let tanggalDibuat = 'Baru saja';
+                if (d.createdAt) {
+                    try {
+                        const date = new Date(d.createdAt);
+                        if (!isNaN(date.getTime())) tanggalDibuat = date.toLocaleDateString('id-ID');
+                    } catch (e) {}
+                }
+                
+                const status = d.status_kirim ? d.status_kirim.toUpperCase() : 'PROSES';
+
+                return `
+                    <div class="bg-white p-8 rounded-[35px] shadow-sm border border-gray-100 hover:shadow-lg transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="bg-blue-50 text-[#33A1E0] text-[10px] font-black px-3 py-1 rounded-full uppercase">${status}</span>
+                            <p class="text-xs text-gray-400">Dibuat: ${tanggalDibuat}</p>
+                        </div>
+                        <h3 class="text-xl font-black text-[#113F67] mb-1">${namaSekolah}</h3>
+                        <p class="text-sm text-gray-500 mb-2 italic">${namaMenu}</p>
+                        <p class="text-xs text-gray-400 mb-3 flex items-center gap-1">
+                            <i class="fa-solid fa-clock text-[#33A1E0]"></i> Estimasi Tiba: ${tanggalTiba}
+                        </p>
+                        <div class="flex justify-between items-center pt-4 border-t border-gray-50">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-box-open text-gray-300"></i>
+                                <span class="font-bold text-[#113F67]">${d.jumlah_porsi || 0} Porsi</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-1 text-xs text-gray-400">
+                                    <i class="fa-solid fa-shop"></i> <span>${namaDapur}</span>
+                                </div>
+                                <button onclick="editDistribusi(${d.id_shipment})" 
+                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center">
+                                    <i class="fa-solid fa-pencil text-xs"></i>
+                                </button>
+                                <button onclick="deleteDistribusi(${d.id_shipment})" 
+                                    class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        if (tableBody) {
+            tableBody.innerHTML = list.map(d => {
+                const namaSekolah = d.nama_sekolah || `ID: ${d.id_sekolah}`;
+                const namaMenu    = d.nama_menu    || `ID: ${d.id_menu}`;
+                const status      = d.status_kirim || 'Persiapan';
+
+                return `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-8 py-4 font-bold text-[#113F67]">${namaSekolah}</td>
+                        <td class="px-8 py-4">${namaMenu}</td>
+                        <td class="px-8 py-4 text-center font-semibold">${d.jumlah_porsi || 0}</td>
+                        <td class="px-8 py-4 text-center text-xs">
+                            <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded">${status}</span>
+                        </td>
+                        <td class="px-8 py-4 text-center">
+                            <div class="flex justify-center gap-2">
+                                <button onclick="editDistribusi(${d.id_shipment})" 
+                                    class="w-8 h-8 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
+                                    <i class="fa-solid fa-pencil text-xs"></i>
+                                </button>
+                                <button onclick="deleteDistribusi(${d.id_shipment})" 
+                                    class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+    } catch (err) {
+        console.error("[fetchDistribusi] Error:", err);
+        if (containerGrid) containerGrid.innerHTML = `<div class="col-span-full text-center text-red-500 py-10">Gagal memuat: ${err.message}</div>`;
+    }
 }
 
 async function setupFormDistribusi() {
@@ -678,38 +955,78 @@ async function setupFormDistribusi() {
     const editId = new URLSearchParams(window.location.search).get('id');
 
     if (editId) {
+        const formTitle = document.querySelector('h3');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (formTitle) formTitle.innerText = "Edit Pengiriman";
+        if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Simpan Perubahan';
+
         try {
-            const res = await API.distribusi.getById(editId);
-            const sh = res.shipmentById;
-            document.getElementById('id_sekolah').value = sh.id_sekolah;
-            document.getElementById('id_dapur').value = sh.id_dapur;
-            document.getElementById('id_menu').value = sh.id_menu;
-            document.getElementById('jumlah_porsi').value = sh.jumlah_porsi;
-            document.getElementById('status_kirim').value = sh.status_kirim;
-        } catch (e) { console.error(e); }
+            await fillDistribusiDropdowns();
+
+            const data = await API.distribusi.getById(parseInt(editId));
+            const d = data.shipmentById;
+
+            if (!d) {
+                alert("Data pengiriman tidak ditemukan!");
+                window.location.href = 'distribusi.html';
+                return;
+            }
+
+            document.getElementById('id_sekolah_dist').value = d.id_sekolah || '';
+            document.getElementById('id_menu_dist').value    = d.id_menu    || '';
+            document.getElementById('id_dapur_dist').value   = d.id_dapur   || '';
+            document.getElementById('jumlah_porsi').value    = d.jumlah_porsi || 0;
+            document.getElementById('status_kirim').value    = d.status_kirim || 'Persiapan';
+
+            const waktuInput = document.getElementById('waktu_sampai');
+            if (waktuInput && d.waktu_sampai) {
+                try {
+                    const date = new Date(d.waktu_sampai);
+                    if (!isNaN(date.getTime())) waktuInput.value = date.toISOString().split('T')[0];
+                } catch (e) {}
+            }
+
+        } catch (err) {
+            console.error("[setupFormDistribusi] Gagal load data:", err);
+            alert("Gagal memuat data pengiriman: " + err.message);
+        }
     }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const payload = {
-            id_sekolah: document.getElementById('id_sekolah').value,
-            id_dapur: document.getElementById('id_dapur').value,
-            id_menu: document.getElementById('id_menu').value,
-            jumlah_porsi: document.getElementById('jumlah_porsi').value,
-            status_kirim: document.getElementById('status_kirim').value,
-            waktu_sampai: new Date().toISOString()
+
+        const statusKirim = document.getElementById('status_kirim').value;
+        const waktuSampai = document.getElementById('waktu_sampai')?.value;
+
+        const input = {
+            id_sekolah:   parseInt(document.getElementById('id_sekolah_dist').value),
+            id_menu:      parseInt(document.getElementById('id_menu_dist').value),
+            id_dapur:     parseInt(document.getElementById('id_dapur_dist').value),
+            jumlah_porsi: parseInt(document.getElementById('jumlah_porsi').value || 0),
+            status_kirim: statusKirim,
+            waktu_sampai: statusKirim === 'Diterima' 
+                ? new Date().toISOString().split('T')[0]
+                : (waktuSampai || null)
         };
+
+        if (!input.id_sekolah || !input.id_menu || !input.id_dapur) {
+            alert("Sekolah, Menu, and Dapur harus dipilih!");
+            return;
+        }
 
         try {
             if (editId) {
-                await API.distribusi.update(editId, payload);
-                alert("Pengiriman diperbarui!");
+                await API.distribusi.update(parseInt(editId), input);
+                alert("Pengiriman berhasil diperbarui!");
             } else {
-                await API.distribusi.create(payload);
-                alert("Pengiriman baru dijadwalkan!");
+                await API.distribusi.create(input);
+                alert("Pengiriman berhasil dikonfirmasi!");
             }
-            window.location.href = 'distribusi.html';
-        } catch (e) { alert("Gagal memproses distribusi."); }
+            window.location.href = "distribusi.html";
+        } catch (err) {
+            console.error("[setupFormDistribusi] Gagal submit:", err);
+            alert("Gagal: " + err.message);
+        }
     });
 }
 
@@ -717,46 +1034,94 @@ function editDistribusi(id) {
     window.location.href = `crudDistribusi.html?id=${id}`;
 }
 
+async function deleteDistribusi(id) {
+    if (!confirm("Hapus data pengiriman ini? Tindakan tidak bisa dibatalkan.")) return;
+    try {
+        await API.distribusi.delete(parseInt(id));
+        alert("Data pengiriman berhasil dihapus!");
+        fetchDistribusi();
+    } catch (err) {
+        console.error("[deleteDistribusi] Error:", err);
+        alert("Gagal menghapus data: " + err.message);
+    }
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// UI DROPDOWN FILLERS
+// DROPDOWN HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function fillDapurDropdown() {
-    const select = document.getElementById('id_dapur');
-    if (!select) return;
+    const sel = document.getElementById('id_dapur');
+    if (!sel) return;
+
     try {
         const data = await API.dapur.getAll();
-        select.innerHTML = '<option value="">-- Pilih Unit Dapur --</option>' + 
-            (data.semuaDapur || []).map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
-    } catch (e) { console.error(e); }
+        const list = data.semuaDapur || [];
+        sel.innerHTML = '<option value="">Pilih Unit Dapur...</option>' +
+            list.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
+        console.log("[fillDapurDropdown] Loaded", list.length, "dapur");
+    } catch (err) {
+        console.error("[fillDapurDropdown] Error:", err);
+        sel.innerHTML = '<option value="">Gagal memuat dapur</option>';
+    }
 }
 
 async function fillDapurMenuDropdown() {
-    const select = document.getElementById('id_dapur_menu');
-    if (!select) return;
+    const sel = document.getElementById('id_dapur_menu');
+    if (!sel) return;
+
     try {
         const data = await API.dapur.getAll();
-        select.innerHTML = '<option value="">-- Pilih Unit Dapur --</option>' + 
-            (data.semuaDapur || []).map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
-    } catch (e) { console.error(e); }
+        const list = data.semuaDapur || [];
+        sel.innerHTML = '<option value="">Pilih Unit Dapur...</option>' +
+            list.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
+        console.log("[fillDapurMenuDropdown] Loaded", list.length, "dapur");
+    } catch (err) {
+        console.error("[fillDapurMenuDropdown] Error:", err);
+        sel.innerHTML = '<option value="">Gagal memuat dapur</option>';
+    }
 }
 
 async function fillDistribusiDropdowns() {
-    const sSekolah = document.getElementById('id_sekolah');
-    const sDapur = document.getElementById('id_dapur');
-    const sMenu = document.getElementById('id_menu');
-
-    if (!sSekolah || !sDapur || !sMenu) return;
+    const sekolahSelect = document.getElementById('id_sekolah_dist');
+    const menuSelect    = document.getElementById('id_menu_dist');
+    const dapurSelect   = document.getElementById('id_dapur_dist');
+    
+    if (!sekolahSelect || !menuSelect || !dapurSelect) {
+        console.warn("[fillDistribusiDropdowns] Dropdown tidak ditemukan, skip.");
+        return;
+    }
 
     try {
-        const sch = await API.sekolah.getAll();
-        sSekolah.innerHTML = (sch.semuaSekolah || []).map(s => `<option value="${s.id_sekolah}">${s.nama_sekolah}</option>`).join('');
+        console.log("[fillDistribusiDropdowns] Fetching data...");
+        
+        const [sekolahData, menuData, dapurData] = await Promise.all([
+            API.sekolah.getAll(),
+            API.menu.getAll(),
+            API.dapur.getAll()
+        ]);
 
-        const dpr = await API.dapur.getAll();
-        sDapur.innerHTML = (dpr.semuaDapur || []).map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
+        const sekolahList = sekolahData.semuaSekolah || [];
+        const menuList    = menuData.getSemuaMenu    || [];
+        const dapurList   = dapurData.semuaDapur     || [];
 
-        const mnu = await API.menu.getAll();
-        sMenu.innerHTML = (mnu.getSemuaMenu || []).map(m => `<option value="${m.id_menu}">${m.nama_paket}</option>`).join('');
-    } catch (e) { console.error(e); }
+        console.log(`[fillDistribusiDropdowns] Loaded: ${sekolahList.length} sekolah, ${menuList.length} menu, ${dapurList.length} dapur`);
+
+        sekolahSelect.innerHTML = '<option value="">Pilih Sekolah...</option>' +
+            sekolahList.map(s => `<option value="${s.id_sekolah}">${s.nama_sekolah}</option>`).join('');
+
+        menuSelect.innerHTML = '<option value="">Pilih Menu...</option>' +
+            menuList.map(m => `<option value="${m.id_menu}">${m.nama_paket}</option>`).join('');
+
+        dapurSelect.innerHTML = '<option value="">Pilih Dapur...</option>' +
+            dapurList.map(d => `<option value="${d.id_dapur}">${d.nama_dapur}</option>`).join('');
+
+    } catch (err) {
+        console.error("[fillDistribusiDropdowns] Error:", err);
+        const errorOption = '<option value="">Gagal memuat data</option>';
+        sekolahSelect.innerHTML = errorOption;
+        menuSelect.innerHTML    = errorOption;
+        dapurSelect.innerHTML   = errorOption;
+    }
 }

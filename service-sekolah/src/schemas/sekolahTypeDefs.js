@@ -21,6 +21,7 @@ const typeDefs = gql`
   input UpdateSekolahInput {
     nama_sekolah: String
     alamat_sekolah: String
+    jenjang: String
     jumlah_siswa: Int
   }
 
