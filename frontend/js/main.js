@@ -286,7 +286,6 @@ async function setupFormSekolah() {
         try {
             const data = await API.sekolah.getById(String(editId));
             
-            // ANTI-CRASH: Cek apakah datanya ada di dalam properti sekolahById ATAU langsung di objek data itu sendiri
             let s = null;
             if (data) {
                 if (data.sekolahById) {
@@ -305,7 +304,6 @@ async function setupFormSekolah() {
                 document.getElementById('jumlah_siswa').value   = s.jumlah_siswa   || 0;
                 document.getElementById('alamat_sekolah').value = s.alamat_sekolah || '';
                 
-                // Kunci input NPSN agar user tahu NPSN tidak boleh diedit (karena dilarang UpdateSekolahInput)
                 document.getElementById('npsn').disabled = true;
             } else {
                 console.error("[setupFormSekolah] Data sekolah tidak ditemukan dalam response:", data);
@@ -329,7 +327,6 @@ async function setupFormSekolah() {
 
         try {
             if (editId) {
-                // Salin objek input dan BUANG npsn karena dilarang oleh UpdateSekolahInput di backend
                 const updatePayload = { ...input };
                 delete updatePayload.npsn;
 
@@ -344,7 +341,6 @@ async function setupFormSekolah() {
         } catch (err) {
             console.error("[setupFormSekolah] Gagal simpan:", err);
             
-            // Pengaman pembacaan error agar tidak memicu "Cannot read properties of undefined"
             let msg = err.message;
             if (err.response && err.response.data && err.response.data.errors && err.response.data.errors[0]) {
                 msg = err.response.data.errors[0].message;

@@ -1,21 +1,74 @@
 version: '3.8'
 
 services:
+  db-dapur:
+    image: mysql:8.0
+    container_name: mbg-db-dapur
+    restart: always
+    environment:
+      MYSQL_DATABASE: db_dapur
+      MYSQL_ROOT_PASSWORD: password123
+    volumes:
+      - db-dapur-data:/var/lib/mysql
+
+  db-menu:
+    image: mysql:8.0
+    container_name: mbg-db-menu
+    restart: always
+    environment:
+      MYSQL_DATABASE: db_menu
+      MYSQL_ROOT_PASSWORD: password123
+    volumes:
+      - db-menu-data:/var/lib/mysql
+
+  db-sekolah:
+    image: mysql:8.0
+    container_name: mbg-db-sekolah
+    restart: always
+    environment:
+      MYSQL_DATABASE: db_sekolah
+      MYSQL_ROOT_PASSWORD: password123
+    volumes:
+      - db-sekolah-data:/var/lib/mysql
+
+  db-distribusi:
+    image: mysql:8.0
+    container_name: mbg-db-distribusi
+    restart: always
+    environment:
+      MYSQL_DATABASE: db_distribusi
+      MYSQL_ROOT_PASSWORD: password123
+    volumes:
+      - db-distribusi-data:/var/lib/mysql
+
+  db-inventory:
+    image: mysql:8.0
+    container_name: mbg-db-inventory
+    restart: always
+    environment:
+      MYSQL_DATABASE: db_inventory
+      MYSQL_ROOT_PASSWORD: password123
+    volumes:
+      - db-inventory-data:/var/lib/mysql
 
   service-dapur:
     build: ./service-dapur
     container_name: mbg-service-dapur
+    depends_on:
+      - db-dapur
     ports:
       - "3001:3001"
     env_file:
       - ./service-dapur/.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    restart: always  # FIX: was "always-e" (typo)
+    restart: always
 
   service-menu:
     build: ./service-menu
     container_name: mbg-service-menu
+    depends_on:
+      - db-menu
     ports:
       - "3002:3002"
     env_file:
@@ -27,6 +80,8 @@ services:
   service-sekolah:
     build: ./service-sekolah
     container_name: mbg-service-sekolah
+    depends_on:
+      - db-sekolah
     ports:
       - "3003:3003"
     env_file:
@@ -38,6 +93,8 @@ services:
   service-distribusi:
     build: ./service-distribusi
     container_name: mbg-service-distribusi
+    depends_on:
+      - db-distribusi
     ports:
       - "3005:3005"
     env_file:
@@ -49,6 +106,8 @@ services:
   service-inventory:
     build: ./service-inventory
     container_name: mbg-service-inventory
+    depends_on:
+      - db-inventory
     ports:
       - "3004:3004"
     env_file:
@@ -67,3 +126,10 @@ services:
     volumes:
       - ./frontend:/app
     restart: always
+
+volumes:
+  db-dapur-data:
+  db-menu-data:
+  db-sekolah-data:
+  db-distribusi-data:
+  db-inventory-data:
